@@ -26,7 +26,11 @@ void lane_detection(Mat frame)
 	Mat sub1, sub2, sub3, sub4, smot1, smot2, smot3, smot4, gray1, gray2, gray3, gray4, white1, white2, white3, white4;
 	Mat canny1, canny2, canny3, canny4, left1, left2, left3, left4, right1, right2, right3, right4;
 
+	// vector for line
+
 	vector<Vec4i> lines;
+
+
 
 	// throwing away the first frame
 
@@ -114,9 +118,9 @@ void lane_detection(Mat frame)
 	/*************white detection**************/
 
 	inRange(gray, 180, 255, white);
-	//»ó¼ö°¡ ¾Æ´Ï¶ó ¿µ»óÀÇ ¹à±â¸¦ º¸°í adaptiveÇÏ°Ô ¸¸µé¾î¾ß ÇÑ´Ù.
-	//¿µ»óÀÇ ¹à±â¸¦ ¸îÇÁ·¹ÀÓ ±âÁØÀ¸·Î min, Ç¥ÁØÆíÂ÷, Æò±ÕÀ» º¸°í Á¤ÇØ¾ß ÇÑ´Ù.
-	//Â÷¼±Àº min°ª º¸´Ù´Â ´õ ¹à¾Æ¾ß ÇÑ´Ù. ¾ó¸¶³ª ´õ ¹à¾Æ¾ß ÇÏ´Â°¡? sigma È°¿ë. Åë°è °ª È°¿ë. 
+	//ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Æ´Ï¶ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½â¸¦ ï¿½ï¿½ï¿½ï¿½ adaptiveï¿½Ï°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ñ´ï¿½.
+	//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½â¸¦ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ min, Ç¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ø¾ï¿½ ï¿½Ñ´ï¿½.
+	//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ minï¿½ï¿½ ï¿½ï¿½ï¿½Ù´ï¿½ ï¿½ï¿½ ï¿½ï¿½Æ¾ï¿½ ï¿½Ñ´ï¿½. ï¿½ó¸¶³ï¿½ ï¿½ï¿½ ï¿½ï¿½Æ¾ï¿½ ï¿½Ï´Â°ï¿½? sigma È°ï¿½ï¿½. ï¿½ï¿½ï¿½ ï¿½ï¿½ È°ï¿½ï¿½. 
 	inRange(gray1, 180, 255, white1);
 	inRange(gray2, 180, 255, white2);
 	inRange(gray3, 180, 255, white3);
@@ -174,9 +178,9 @@ void lane_detection(Mat frame)
 		y1 = yp1;
 		y2 = yp2;
 	}
-	//¼±ÀÌ ¾ÈÀâÈ÷¸é ÀÌÀü ÇÁ·¹ÀÓÀ» ¾²´Â°Í.
+	//ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Â°ï¿½.
 	if (countleft == 0) {
-		x3 = xp3; //xp´Â past x.
+		x3 = xp3; //xpï¿½ï¿½ past x.
 		x4 = xp4;
 		y3 = yp3;
 		y4 = yp4;
@@ -194,7 +198,7 @@ void lane_detection(Mat frame)
 	float lastx3 = ((0 - lb) / Lslope);
 	float lastx4 = ((frame.rows - lb) / Lslope);
 
-	//¼Ò½ÇÁ¡ ±¸ÇÏ´Â ÆÄÆ®
+	//ï¿½Ò½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½Æ®
 
 	a1 = lastx1 + x, a2 = lastx2 + x, a3 = lastx3 + x, a4 = lastx4 + x;
 	b1 = 0, b2 = frame.rows, b3 = 0, b4 = frame.rows;
@@ -267,9 +271,9 @@ void lane_detection(Mat frame)
 		y1 = yp1;
 		y2 = yp2;
 	}
-	//¼±ÀÌ ¾ÈÀâÈ÷¸é ÀÌÀü ÇÁ·¹ÀÓÀ» ¾²´Â°Í.
+	//ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Â°ï¿½.
 	if (countleft == 0) {
-		x3 = xp3; //xp´Â past x.
+		x3 = xp3; //xpï¿½ï¿½ past x.
 		x4 = xp4;
 		y3 = yp3;
 		y4 = yp4;
@@ -287,7 +291,7 @@ void lane_detection(Mat frame)
 	lastx3 = ((0 - lb) / Lslope);
 	lastx4 = ((frame.rows - lb) / Lslope);
 
-	//¼Ò½ÇÁ¡ ±¸ÇÏ´Â ÆÄÆ®
+	//ï¿½Ò½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½Æ®
 
 	a1 = lastx1 + x, a2 = lastx2 + x, a3 = lastx3 + x, a4 = lastx4 + x;
 	b1 = 0, b2 = frame.rows, b3 = 0, b4 = frame.rows;
@@ -359,9 +363,9 @@ void lane_detection(Mat frame)
 	y1 = yp1;
 	y2 = yp2;
 	}
-	//¼±ÀÌ ¾ÈÀâÈ÷¸é ÀÌÀü ÇÁ·¹ÀÓÀ» ¾²´Â°Í.
+	//ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Â°ï¿½.
 	if (countleft == 0) {
-	x3 = xp3; //xp´Â past x.
+	x3 = xp3; //xpï¿½ï¿½ past x.
 	x4 = xp4;
 	y3 = yp3;
 	y4 = yp4;
@@ -380,7 +384,7 @@ void lane_detection(Mat frame)
 	lastx3 = ((0 - lb) / Lslope);
 	lastx4 = ((frame.rows - lb) / Lslope);
 
-	//¼Ò½ÇÁ¡ ±¸ÇÏ´Â ÆÄÆ®
+	//ï¿½Ò½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½Æ®
 
 	a1 = lastx1 + x, a2 = lastx2 + x, a3 = lastx3 + x, a4 = lastx4 + x;
 	b1 = 0, b2 = frame.rows, b3 = 0, b4 = frame.rows;
