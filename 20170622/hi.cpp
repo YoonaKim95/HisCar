@@ -60,7 +60,7 @@ void lane_detection(Mat frame)
     
     int subROIHeight = height / 16;  // Calculate the height of sub_ROIs
     
-    //Point of cener.
+    //Point of center.중점은 검은색으로 고정시켰음.
      circle(frame, Point(frame.cols/2,frame.rows/4), 5, Scalar(0,0,0), 3, LINE_AA);
     /*
      cout << "col: " << frame.cols << endl;
