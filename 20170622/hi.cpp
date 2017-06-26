@@ -24,7 +24,7 @@ void lane_detection(Mat frame)
 {
     Mat gray, smot, sub, hsv, white, yellow, both, canny, left, right;
     
-    Mat sub1, sub2, sub3, sub4, smot1, smot2, smot3, smot4, gray1, gray2, gray3, gray4, white1, white2, white3, white4,gray_original_frame;
+    Mat sub1, sub2, sub3, sub4, smot1, smot2, smot3, smot4, gray1, gray2, gray3, gray4, white1, white2, white3, white4,gray_original_sub;
     Mat canny1, canny2, canny3, canny4, left1, left2, left3, left4, right1, right2, right3, right4,hlsImg,hist;
     
     vector<Mat> channels(hlsImg.channels()); // vector Mat for histogram
@@ -375,7 +375,7 @@ void lane_detection(Mat frame)
     //---------------------histogram values
     
     
-       cvtColor(frame, gray_original_frame, CV_BGR2GRAY);
+       cvtColor(sub, gray_original_sub, CV_BGR2GRAY);
     // Quantize the hue to 30 levels
     // and the saturation to 32 levels
     
@@ -388,7 +388,7 @@ void lane_detection(Mat frame)
 
     
    // calcHist(&gray_original_frame, 1, 0, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
-      calcHist(&gray_original_frame, 1, 0, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
+      calcHist(&gray_original_sub, 1, 0, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
     
     for(int i = 0 ; i < hist.rows; i++)
     {
@@ -406,7 +406,7 @@ void lane_detection(Mat frame)
     const float* channel_ranges = channel_range;
     int number_bins = 255;
     
-    calcHist(&gray_original_frame, 1, channel_numbers, Mat(), histogram, 1, &number_bins, &channel_ranges);
+    calcHist(&gray_original_sub, 1, channel_numbers, Mat(), histogram, 1, &number_bins, &channel_ranges);
     
     // Plot the histogram
     int hist_w = 512; int hist_h = 400;
@@ -420,10 +420,12 @@ void lane_detection(Mat frame)
         line(histImage, Point(bin_w*(i - 1), hist_h - cvRound(histogram.at<float>(i - 1))),
              Point(bin_w*(i), hist_h - cvRound(histogram.at<float>(i))),
              Scalar(255, 0, 0), 2, 8, 0);
-    }
+    
     
     imshow("Histogram", histImage);
+    imshow("gray_histo",gray_original_sub);
     
+    }
     
 }
 
