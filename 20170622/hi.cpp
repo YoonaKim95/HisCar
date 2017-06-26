@@ -120,6 +120,7 @@ void lane_detection(Mat frame)
     
     
     
+    
     //parts
     cvtColor(sub1, gray1, CV_BGR2GRAY);
     cvtColor(sub2, gray2, CV_BGR2GRAY);
@@ -137,6 +138,97 @@ void lane_detection(Mat frame)
     inRange(gray3, 180, 255, white3);
     inRange(gray4, 180, 255, white4);
     
+    
+    /*****************hitogram***************/
+     
+     
+     //-------------------histogram equalization.
+     //    cvtColor(frame, hlsImg, COLOR_BGR2HLS_FULL);
+     //
+     //    split(hlsImg,channels);
+     //    equalizeHist(channels[1], channels[1]);
+     //    merge(channels, hlsImg);
+     //    cvtColor(hlsImg, frame, COLOR_HLS2BGR_FULL);
+     //    imshow("hlsImg", frame);
+     
+     
+     
+     //---------------------histogram values
+     
+     
+     cvtColor(sub, gray_original_sub, CV_BGR2GRAY);
+//      Quantize the hue to 30 levels
+//      and the saturation to 32 levels
+//    
+//             histogram init
+//             int histSize = 256;
+//             float range[] = {0, 256};
+//             const float* histRange = {range};
+//             bool uniform = true;
+//             bool accumulate = false;
+    
+     
+//      //calcHist(&gray_original_sub, 1, 0, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
+//     calcHist(&gray_original_sub, 1, 0, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
+//     
+//     for(int i = 0 ; i < hist.rows; i++)
+//     {
+//     for(int j = 0; j < hist.cols; j++)
+//     {
+//     cout << hist.at<int>(i,j) << " ";
+//     }
+//     cout << endl;
+//     }
+//     
+////      histogram graph
+//         MatND histogram;
+//         const int* channel_numbers = { 0 };
+//         float channel_range[] = { 0.0, 255.0 };
+//         const float* channel_ranges = channel_range;
+//         int number_bins = 255;
+//     
+//         calcHist(&gray_original_sub, 1, channel_numbers, Mat(), histogram, 1, &number_bins, &channel_ranges);
+//     
+////          Plot the histogram
+//         int hist_w = 512; int hist_h = 400;
+//         int bin_w = cvRound((double)hist_w / number_bins);
+//     
+//         Mat histImage(hist_h, hist_w, CV_8UC1, Scalar(0, 0, 0));
+//         normalize(histogram, histogram, 0, histImage.rows, NORM_MINMAX, -1, Mat());
+//     
+//         for (int i = 1; i < number_bins; i++)
+//         {
+//             line(histImage, Point(bin_w*(i - 1), hist_h - cvRound(histogram.at<float>(i - 1))),
+//                  Point(bin_w*(i), hist_h - cvRound(histogram.at<float>(i))),
+//                  Scalar(255, 0, 0), 2, 8, 0);
+//     
+//     
+//         imshow("Histogram", histImage);
+//         imshow("gray_histo",gray_original_sub);
+//     
+//         }
+//    
+    // showing the brightest point
+    
+
+     double maxLoc=0;
+     minMaxLoc(gray4, 0,&maxLoc,0,0 );
+         putText(frame, "hi" ,Point(300,400) , FONT_HERSHEY_PLAIN, 2, Scalar(LaneColor4), 2, LINE_8);
+     
+      cout << maxLoc<< " " ;
+     
+     char str[200];
+     sprintf(str,"max value : %f",maxLoc);
+     putText(frame, str, Point2f(300,400), FONT_HERSHEY_PLAIN, 2,  Scalar(LaneColor3),2,LINE_8);
+     
+    
+//    double maxLoc=0;
+    Point maxPoint;
+    
+    minMaxLoc(gray4, 0,&maxLoc,0, &maxPoint);
+    circle(frame, rec4_point + maxPoint, 2, Scalar(255,10,10), 5, 8, 0);
+    
+    imshow("gray4",gray4);
     
     /*************edge detection**************/
     Canny(white, canny, 150, 300, 3);
@@ -361,74 +453,6 @@ void lane_detection(Mat frame)
         }
        
     
-    //-------------------histogram equalization.
-//    cvtColor(frame, hlsImg, COLOR_BGR2HLS_FULL);
-//
-//    split(hlsImg,channels);
-//    equalizeHist(channels[1], channels[1]);
-//    merge(channels, hlsImg);
-//    cvtColor(hlsImg, frame, COLOR_HLS2BGR_FULL);
-//    imshow("hlsImg", frame);
-    
-    
-    
-    //---------------------histogram values
-    
-    
-       cvtColor(sub, gray_original_sub, CV_BGR2GRAY);
-    // Quantize the hue to 30 levels
-    // and the saturation to 32 levels
-    
-//        //histogram init
-//        int histSize = 256;
-//        float range[] = {0, 256};
-//        const float* histRange = {range};
-//        bool uniform = true;
-//        bool accumulate = false;
-
-    
-   // calcHist(&gray_original_frame, 1, 0, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
-      calcHist(&gray_original_sub, 1, 0, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
-    
-    for(int i = 0 ; i < hist.rows; i++)
-    {
-        for(int j = 0; j < hist.cols; j++)
-        {
-            //cout << hist.at<int>(i,j) << " ";
-        }
-        cout << endl;
-    }
-    
-    // histogram graph
-    MatND histogram;
-    const int* channel_numbers = { 0 };
-    float channel_range[] = { 0.0, 255.0 };
-    const float* channel_ranges = channel_range;
-    int number_bins = 255;
-    
-    calcHist(&gray_original_sub, 1, channel_numbers, Mat(), histogram, 1, &number_bins, &channel_ranges);
-    
-    // Plot the histogram
-    int hist_w = 512; int hist_h = 400;
-    int bin_w = cvRound((double)hist_w / number_bins);
-    
-    Mat histImage(hist_h, hist_w, CV_8UC1, Scalar(0, 0, 0));
-    normalize(histogram, histogram, 0, histImage.rows, NORM_MINMAX, -1, Mat());
-    
-    for (int i = 1; i < number_bins; i++)
-    {
-        line(histImage, Point(bin_w*(i - 1), hist_h - cvRound(histogram.at<float>(i - 1))),
-             Point(bin_w*(i), hist_h - cvRound(histogram.at<float>(i))),
-             Scalar(255, 0, 0), 2, 8, 0);
-
-        
-    imshow("Histogram", histImage);
-    imshow("gray_histo",gray_original_sub);
-    
-    }
-    double maxLoc=0;
-    minMaxLoc(gray_original_sub, 0,&maxLoc,0,0 );
-    cout << maxLoc<< " " ;
     
 }
 
@@ -449,7 +473,7 @@ int main() {
         
         lane_detection(frame);
         
-        imshow("frame", frame);
+        imshow("frame", frame); //show the original frame
         
         key = waitKey(frame_rate);
         if (key == 32) {
