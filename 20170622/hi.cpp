@@ -394,7 +394,7 @@ void lane_detection(Mat frame)
     {
         for(int j = 0; j < hist.cols; j++)
         {
-            cout << hist.at<int>(i,j) << " ";
+            //cout << hist.at<int>(i,j) << " ";
         }
         cout << endl;
     }
@@ -420,12 +420,15 @@ void lane_detection(Mat frame)
         line(histImage, Point(bin_w*(i - 1), hist_h - cvRound(histogram.at<float>(i - 1))),
              Point(bin_w*(i), hist_h - cvRound(histogram.at<float>(i))),
              Scalar(255, 0, 0), 2, 8, 0);
-    
-    
+
+        
     imshow("Histogram", histImage);
     imshow("gray_histo",gray_original_sub);
     
     }
+    double maxLoc=0;
+    minMaxLoc(gray_original_sub, 0,&maxLoc,0,0 );
+    cout << maxLoc<< " " ;
     
 }
 
