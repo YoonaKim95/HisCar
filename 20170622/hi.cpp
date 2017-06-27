@@ -90,6 +90,7 @@ void lane_detection(Mat frame)
 	Rect rec2(rec2_point, Size(width, subROIHeight * 2)); // ROI 2
 
 	Point rec3_point(interest_x, interest_y + subROIHeight * 3);
+    Point rec3_Rpoint(interest_x+width/2, interest_y + subROIHeight * 3);
 	Rect rec3(rec3_point, Size(width, subROIHeight * 3)); // ROI3
 
 	Point rec4_point(interest_x, interest_y + subROIHeight * 6);
@@ -100,7 +101,7 @@ void lane_detection(Mat frame)
 
 	Rect left_rec1(0, 0, width / 2, subROIHeight * 2);
 	Rect left_rec2(0, subROIHeight, width / 2, subROIHeight * 2);
-	Rect left_rec3(0, subROIHeight * 3, width / 2, subROIHeight * 5);
+    Rect left_rec3(rec3_point, Size(width/2, subROIHeight * 3));
 	Rect left_rec4(0, subROIHeight * 6, width / 2, subROIHeight * 10);
 
 
@@ -108,7 +109,7 @@ void lane_detection(Mat frame)
 
 	Rect right_rec1(width / 2, 0, width / 2, subROIHeight * 2);
 	Rect right_rec2(width / 2, subROIHeight, width / 2, subROIHeight * 2);
-	Rect right_rec3(width / 2, subROIHeight * 3, width / 2, subROIHeight * 5);
+	Rect right_rec3(rec3_Rpoint, Size(width/2, subROIHeight * 3));
 	Rect right_rec4(width / 2, subROIHeight * 6, width / 2, subROIHeight * 10);
 
 	sub = frame(rec);
@@ -118,10 +119,10 @@ void lane_detection(Mat frame)
 	sub3 = frame(rec3);
 	sub4 = frame(rec4);
 
-	rectangle(frame, rec1, LaneColor1, 3);
-	rectangle(frame, rec2, LaneColor2, 3);
-	rectangle(frame, rec3, LaneColor3, 3);
-	rectangle(frame, rec4, LaneColor4, 3);
+	rectangle(frame, rec1, LaneColor1, 1);
+	rectangle(frame, left_rec3, LaneColor2, 1);
+	rectangle(frame, right_rec3, LaneColor3, 1);
+	rectangle(frame, rec4, LaneColor4, 1);
 
 	// bgr2gray
 	cvtColor(sub, gray, CV_BGR2GRAY);
@@ -470,7 +471,7 @@ void lane_detection(Mat frame)
 
 
 int main() {
-	char title[100] = "mono.mp4";
+	char title[100] = "/Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/mono.mp4";
 	VideoCapture capture(title);
 	Mat frame;
     Mat origin;
