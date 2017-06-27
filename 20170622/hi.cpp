@@ -148,7 +148,7 @@ void lane_detection(Mat frame)
 	inRangeMax = maxLoc;
 
 	// calculate min value of inRange
-	inRangeMin = maxLoc - (2 * (255 - maxLoc)) - 40;
+	inRangeMin = maxLoc - (2 * (260 - maxLoc));
 
 	cout << "inRangeMax = " << inRangeMax << endl;
 	cout << "inRangeMin = " << inRangeMin << endl;
@@ -467,9 +467,10 @@ void lane_detection(Mat frame)
 
 
 int main() {
-	char title[100] = "mono.mp4";
+	char title[100] = "/Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/mono.mp4";
 	VideoCapture capture(title);
 	Mat frame;
+    Mat origin;
 
 	int key, frameNum = 1;
 	int frame_rate = 30;
@@ -478,11 +479,12 @@ int main() {
 
 	// videoRead
 	while (capture.read(frame)) {
-
+        
+        origin = frame.clone();
 		lane_detection(frame);
 
 		imshow("frame", frame); //show the original frame
-
+        imshow("origin",origin);
 		key = waitKey(frame_rate);
 		if (key == 32) {
 			if (frame_rate == 30)
