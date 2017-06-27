@@ -81,7 +81,8 @@ void lane_detection(Mat frame)
      cout << "hei: " << frame.rows << endl;
      cout << "roi: " << subROIHeight << endl;
 	 */
-	//height = 312 / 3 = 10
+
+	// Rpoint is the start point of the right ROI
 
 	Rect rec(interest_x, interest_y, width, height);  // overall ROI
 
@@ -112,17 +113,20 @@ void lane_detection(Mat frame)
 	Rect right_rec4(rec4_Rpoint, Size(halfWidth , subROIHeight * 10));
 
 	sub = frame(rec);
-	GaussianBlur(sub, sub, Size(3, 3), 0, 0);
 	sub1 = frame(rec1);
 	sub2 = frame(rec2);
 	sub3 = frame(rec3);
 	sub4 = frame(rec4);
 
 
+	/*
+	 * show Left and Right ROI
+	 *
 	rectangle(frame, left_rec3, LaneColor3, 2);
 	rectangle(frame, right_rec3, LaneColor3, 2);
 	rectangle(frame, left_rec4, LaneColor4, 2);
 	rectangle(frame, right_rec4, LaneColor4, 2);
+	*/
 
 
 	/*
@@ -198,7 +202,7 @@ void lane_detection(Mat frame)
 	//---------------------histogram values
 
 
-	cvtColor(sub, gray_original_sub, CV_BGR2GRAY);
+	//	cvtColor(sub, gray_original_sub, CV_BGR2GRAY);
 	//      Quantize the hue to 30 levels
 	//      and the saturation to 32 levels
 	//
@@ -256,10 +260,7 @@ void lane_detection(Mat frame)
 
 	/*************edge  detection  3 **************/
 	Canny(white3, canny3, 150, 300, 3);
-
 	imshow("canny3", canny3);
-
-
 
 	vector<Vec4i> lines_R3;
 	vector<Point> pointList_R3;
