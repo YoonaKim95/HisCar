@@ -35,6 +35,7 @@ void lane_detection(Mat frame)
 	int inRangeMax = 0;
 	int inRangeMin = 0;
 
+
 	float x1 = 0, x2 = 0, y1 = 0, y2 = 0;
 	float x3 = 0, x4 = 0, y3 = 0, y4 = 0;
 	float countright = 0, countleft = 0;
@@ -63,8 +64,9 @@ void lane_detection(Mat frame)
 	//// mono.wmv :
 	int interest_y = 168;
 	int interest_x = 0;
-	int width = frame.cols - interest_x - 00;
-	int height = frame.rows - interest_y - 0;
+	int width = frame.cols - interest_x;
+	int height = frame.rows - interest_y;
+	int halfWidth = width / 2;
 	float leftmin = -0.5;
 	float rightmin = 0.6;
 
@@ -84,33 +86,30 @@ void lane_detection(Mat frame)
 	Rect rec(interest_x, interest_y, width, height);  // overall ROI
 
 	Point rec1_point(interest_x, interest_y);
+	Point rec1_Rpoint(interest_x+halfWidth, interest_y);
 	Rect rec1(rec1_point, Size(width, subROIHeight * 2)); // ROI1
 
 	Point rec2_point(interest_x, interest_y + subROIHeight);
+	Point rec2_Rpoint(interest_x+halfWidth, interest_y + subROIHeight);
 	Rect rec2(rec2_point, Size(width, subROIHeight * 2)); // ROI 2
 
 	Point rec3_point(interest_x, interest_y + subROIHeight * 3);
-    Point rec3_Rpoint(interest_x+width/2, interest_y + subROIHeight * 3);
+	Point rec3_Rpoint(interest_x+halfWidth, interest_y + subROIHeight * 3);
 	Rect rec3(rec3_point, Size(width, subROIHeight * 3)); // ROI3
 
 	Point rec4_point(interest_x, interest_y + subROIHeight * 6);
+	Point rec4_Rpoint(interest_x+halfWidth, interest_y + subROIHeight * 6);
 	Rect rec4(rec4_point, Size(width, subROIHeight * 10));
 
+	Rect left_rec1(rec1_point, Size(halfWidth , subROIHeight * 2)); // ROI1
+	Rect left_rec2(rec2_point, Size(halfWidth , subROIHeight * 2)); // ROI 2
+	Rect left_rec3(rec3_point, Size(halfWidth , subROIHeight * 3)); // ROI3
+	Rect left_rec4(rec4_point, Size(halfWidth , subROIHeight * 10));
 
-	Rect left_rec(0, 0, width / 2, height);
-
-	Rect left_rec1(0, 0, width / 2, subROIHeight * 2);
-	Rect left_rec2(0, subROIHeight, width / 2, subROIHeight * 2);
-    Rect left_rec3(rec3_point, Size(width/2, subROIHeight * 3));
-	Rect left_rec4(0, subROIHeight * 6, width / 2, subROIHeight * 10);
-
-
-	Rect right_rec(width / 2, 0, width / 2, height);
-
-	Rect right_rec1(width / 2, 0, width / 2, subROIHeight * 2);
-	Rect right_rec2(width / 2, subROIHeight, width / 2, subROIHeight * 2);
-	Rect right_rec3(rec3_Rpoint, Size(width/2, subROIHeight * 3));
-	Rect right_rec4(width / 2, subROIHeight * 6, width / 2, subROIHeight * 10);
+	Rect right_rec1(rec1_Rpoint, Size(halfWidth , subROIHeight * 2)); // ROI1
+	Rect right_rec2(rec2_Rpoint, Size(halfWidth , subROIHeight * 2)); // ROI 2
+	Rect right_rec3(rec3_Rpoint, Size(halfWidth , subROIHeight * 3)); // ROI3
+	Rect right_rec4(rec4_Rpoint, Size(halfWidth , subROIHeight * 10));
 
 	sub = frame(rec);
 	GaussianBlur(sub, sub, Size(3, 3), 0, 0);
@@ -119,10 +118,21 @@ void lane_detection(Mat frame)
 	sub3 = frame(rec3);
 	sub4 = frame(rec4);
 
-	rectangle(frame, rec1, LaneColor1, 1);
-	rectangle(frame, left_rec3, LaneColor2, 1);
-	rectangle(frame, right_rec3, LaneColor3, 1);
-	rectangle(frame, rec4, LaneColor4, 1);
+
+	rectangle(frame, left_rec3, LaneColor3, 2);
+	rectangle(frame, right_rec3, LaneColor3, 2);
+	rectangle(frame, left_rec4, LaneColor4, 2);
+	rectangle(frame, right_rec4, LaneColor4, 2);
+
+
+	/*
+	 * Equal to system("pause")
+	std::cout << "Press \'Return\' to end." << std::endl;
+	cout.flush();
+	std::cin.get();
+	 */
+
+
 
 	// bgr2gray
 	cvtColor(sub, gray, CV_BGR2GRAY);
@@ -139,7 +149,7 @@ void lane_detection(Mat frame)
 	double maxLoc=0;
 	minMaxLoc(gray4, 0,&maxLoc,0,&maxPoint);
 
-//	cout << maxLoc<< " " ;
+	//	cout << maxLoc<< " " ;
 
 	char str[200];
 	sprintf(str,"max value : %f",maxLoc);
@@ -242,21 +252,14 @@ void lane_detection(Mat frame)
 	//
 
 
-	/*************edge detection**************/
-	Canny(white, canny, 150, 300, 3);
-	left = canny(left_rec);
-	right = canny(right_rec);
-
-
-
-
 
 
 	/*************edge  detection  3 **************/
 	Canny(white3, canny3, 150, 300, 3);
+
 	imshow("canny3", canny3);
-	left3 = canny(left_rec3);
-	right3 = canny(right_rec3);
+
+
 
 	vector<Vec4i> lines_R3;
 	vector<Point> pointList_R3;
@@ -359,8 +362,6 @@ void lane_detection(Mat frame)
 
 	Canny(white4, canny4, 150, 300, 3);
 	imshow("canny4", canny4);
-	left4 = canny(left_rec4);
-	right4 = canny(right_rec4);
 
 	vector<Vec4i> lines_R4;
 	vector<Point> pointList_R4;
@@ -471,10 +472,10 @@ void lane_detection(Mat frame)
 
 
 int main() {
-	char title[100] = "/Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/mono.mp4";
+	char title[100] = "mono.mp4";
 	VideoCapture capture(title);
 	Mat frame;
-    Mat origin;
+	Mat origin;
 
 	int key, frameNum = 1;
 	int frame_rate = 30;
@@ -483,12 +484,12 @@ int main() {
 
 	// videoRead
 	while (capture.read(frame)) {
-        
-        origin = frame.clone();
+
+		origin = frame.clone();
 		lane_detection(frame);
 
 		imshow("frame", frame); //show the original frame
-        //imshow("origin",origin);
+		//imshow("origin",origin);
 		key = waitKey(frame_rate);
 		if (key == 32) {
 			if (frame_rate == 30)
