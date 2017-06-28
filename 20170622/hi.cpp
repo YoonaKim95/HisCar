@@ -73,6 +73,9 @@ void lane_detection(Mat frame)
     
     int subROIHeight = height / 16;  // Calculate the height of sub_ROIs
     
+    frame_gray = frame.clone();
+    cvtColor(frame_gray, frame_gray, CV_BGR2GRAY);
+    
     //Point of center.중점은 검은색으로 고정시켰음.
     circle(frame, Point(frame.cols/2,frame.rows/4), 5, Scalar(0,0,0), 3, LINE_AA);
     
@@ -153,8 +156,7 @@ void lane_detection(Mat frame)
     cvtColor(sub3, gray3, CV_BGR2GRAY);
     cvtColor(sub4, gray4, CV_BGR2GRAY);
     
-    frame_gray = frame.clone();
-    cvtColor(frame_gray, frame_gray, CV_BGR2GRAY);
+    
     
     grayl3 = frame_gray(left_rec3);
     grayl4 = frame_gray(left_rec4);
@@ -217,9 +219,15 @@ void lane_detection(Mat frame)
     inRange(grayr3, inRangeMinr3, inRangeMaxr3, grayr3);
     inRange(grayr4, inRangeMinr4, inRangeMaxr4, grayr4);
     
+
     //white1 = frame_gray(rec1);
     white3 = frame_gray(rec3);
     white4 = frame_gray(rec4);
+    
+    dilate(white3,white3,Mat(),Point(-1,-1),3);
+    dilate(white4,white4,Mat(),Point(-1,-1),3);
+    
+
     
     imshow("gray_frame",frame_gray);
     imshow("grayr4",grayr4);
@@ -307,8 +315,7 @@ void lane_detection(Mat frame)
     
     
     //dilate input image, three times
-    dilate(white3,white3,Mat(),Point(-1,-1),5);
-   
+    
     
     vector<Vec4i> lines_R3;
     vector<Point> pointList_R3;
