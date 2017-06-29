@@ -1,4 +1,3 @@
-//#include "opencv2\highgui\highgui.hpp"
 #include "opencv2/opencv.hpp"
 #include <cmath>
 #include "opencv/cv.hpp"
@@ -14,10 +13,13 @@ using namespace cv;
 #define LaneColor3 Scalar(251,10,255)
 #define LaneColor4 Scalar(255,200,20)
 
+float slopeL_PRE3 = 0 ;
+float slopeR_PRE3 = 0;
+float plb = 0;
+float prb = 0; 
 
-float slopeR_Pre = 0;
-float slope_Pre = 0;
-
+float slopeL_PRE4 = 0;
+float slopeR_PRE4 = 0;
 
 
 void lane_detection(Mat frame)
@@ -103,8 +105,7 @@ void lane_detection(Mat frame)
     sub2 = frame(rec2);
     sub3 = frame(rec3);
     sub4 = frame(rec4);
-    
-    
+  
     //show Left and Right ROI
 
     // bgr2gray
@@ -191,7 +192,6 @@ void lane_detection(Mat frame)
     for (size_t i = 0; i < lines_R3.size(); i++) {
         Vec4i l = lines_R3[i];
         
-        //get slope.
         float slope = ((float)l[3] - (float)l[1]) / ((float)l[2] - (float)l[0]);
         
         //lines of left side
@@ -226,24 +226,50 @@ void lane_detection(Mat frame)
     }
     
     //slopes of right and left.
-    float Rslope = (y2 - y1) / (x2 - x1);
+    float Rslope = (y2 - y1) / (x2 - x1); 
     float Lslope = (y4 - y3) / (x4 - x3);
-    
+
+	float differenceR = abs(slopeR_PRE3 - abs(Rslope));
+	float differenceL = abs(slopeL_PRE3 - abs(Lslope));
+
     float rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
     float lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
-    
-    
-    float lastx1 = (0 - rb) / Rslope;
-    float lastx2 = (frame.rows - rb) / Rslope;
-    
+	
+	float lastx1; 
+	float lastx2; 
+
+	bool drawR3 = false; 
+
+/////// right draw //////////
+		if (differenceR >= 0.09 || slopeR_PRE3 == 0) {
+		lastx1 = (0 - rb) / Rslope;
+		lastx2 = (frame.rows - rb) / Rslope; 
+		a1 = lastx1 + x;
+		a2 = lastx2 + x; 
+		b1 = 0;
+		b2 = frame.rows; 
+		prb = rb; 
+		slopeR_PRE3 = Rslope; 
+		line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3); 
+
+		drawR3 = true; 
+	}
+	
+	if (!drawR3) {
+		lastx1 = (0 - prb) / slopeR_PRE3;
+		lastx2 = (frame.rows - prb) / slopeR_PRE3;
+		a1 = lastx1 + x;
+		a2 = lastx2 + x;
+		line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3);
+	}
+ // left 
     float lastx3 = ((0 - lb) / Lslope);
     float lastx4 = ((frame.rows - lb) / Lslope);
-    
+	//point of line will be drawn.
+	a3 = lastx3 + x, a4 = lastx4 + x;
+	b3 = 0, b4 = frame.rows;
 
-    //point of line will be drawn.
-    a1 = lastx1 + x, a2 = lastx2 + x, a3 = lastx3 + x, a4 = lastx4 + x;
-    b1 = 0, b2 = frame.rows, b3 = 0, b4 = frame.rows;
-    
+	//line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3); // LEFT 
     
     float dataA[] = { (b2 - b1) / (a2 - a1), -1, (b4 - b3) / (a4 - a3), -1 };
     Mat A3(2, 2, CV_32F, dataA);
@@ -256,9 +282,7 @@ void lane_detection(Mat frame)
     //vanishing point.
     Mat X3 = invA3*B3;
     
-  
-    line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3);
-    line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3);
+
     circle(frame, Point(X3.at<float>(0, 0), X3.at<float>(1, 0)), 5, LaneColor3, 3, LINE_AA);
 
     
@@ -328,8 +352,8 @@ void lane_detection(Mat frame)
     
     Mat X4 = invA4*B4;
     
-    line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor4, 3);
-    line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor4, 3);
+  //  line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor4, 3);
+  //  line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor4, 3);
     
     
     circle(frame, Point(X4.at<float>(0, 0), X4.at<float>(1, 0)), 5, LaneColor4, 3, LINE_AA);
@@ -351,7 +375,7 @@ void lane_detection(Mat frame)
 // Namsoo's storage Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/
 
 int main() {
-    char title[100] = "/Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/mono.mp4";
+    char title[100] = "mono.wmv";
     VideoCapture capture(title);
     Mat frame;
     Mat origin;
