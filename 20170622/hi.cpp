@@ -235,8 +235,7 @@ void lane_detection(Mat frame)
     float rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
     float lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
 	
-	float lastx1; 
-	float lastx2; 
+	float lastx1, lastx2, lastx3, lastx4;
 
 	bool drawR3 = false; 
 
@@ -250,6 +249,7 @@ void lane_detection(Mat frame)
 		b2 = frame.rows; 
 		prb = rb; 
 		slopeR_PRE3 = Rslope; 
+
 		line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3); 
 
 		drawR3 = true; 
@@ -263,13 +263,28 @@ void lane_detection(Mat frame)
 		line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3);
 	}
  // left 
-    float lastx3 = ((0 - lb) / Lslope);
-    float lastx4 = ((frame.rows - lb) / Lslope);
-	//point of line will be drawn.
-	a3 = lastx3 + x, a4 = lastx4 + x;
-	b3 = 0, b4 = frame.rows;
+	if (differenceL >= 1.7 || slopeL_PRE3 == 0) {
+		lastx3 = ((0 - lb) / Lslope);
+		lastx4 = ((frame.rows - lb) / Lslope);
+		a3 = lastx3 + x, a4 = lastx4 + x;
+		b3 = 0, b4 = frame.rows;
+		plb = lb;
+		slopeL_PRE3 = Lslope;
+		line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3);
+		cout << "a3: " << a3 << "a4: " << a4 << endl;
 
-	//line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3); // LEFT 
+		drawR3 = true;
+	}
+
+	if (!drawR3) {
+		lastx3 = (0 - plb) / slopeL_PRE3;
+		lastx4 = (frame.rows - plb) / slopeL_PRE3;
+		a3 = lastx3 + x;
+		a4 = lastx4 + x;
+		cout << "PREV a3: " << a3 << "a4: " << a4 << endl; 
+		line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3);
+	}
+
     
     float dataA[] = { (b2 - b1) / (a2 - a1), -1, (b4 - b3) / (a4 - a3), -1 };
     Mat A3(2, 2, CV_32F, dataA);
