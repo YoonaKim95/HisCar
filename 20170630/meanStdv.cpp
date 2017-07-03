@@ -13,7 +13,7 @@ using namespace cv;
 #define LaneColor3 Scalar(251,10,255)
 #define LaneColor4 Scalar(255,200,20)
 
-float slopeL_PRE3 = 0 ;
+float slopeL_PRE3 = 0;
 float slopeR_PRE3 = 0;
 float plb = 0;
 float prb = 0;
@@ -152,10 +152,6 @@ void lane_detection(Mat frame)
 	inRangeMaxr3 = maxLocr3;
 	inRangeMaxr4 = maxLocr4;
 
-
-
-
-
 	// Calculate mean and stdDev of ROI
 	Scalar meanL3,meanR3, meanL4, meanR4;
 	Scalar stdDevL3,stdDevR3, stdDevL4, stdDevR4;
@@ -175,12 +171,17 @@ void lane_detection(Mat frame)
 	stdDevR3f = stdDevR3.val[0];
 	stdDevR4f = stdDevR4.val[0];
 
-
 	// calculate min value of inRange
 	inRangeMinl3 = maxLocl3 - stdDevL3f;
 	inRangeMinl4 = maxLocl4 - stdDevL4f;
 	inRangeMinr3 = maxLocr3 - stdDevR3f;
 	inRangeMinr4 = maxLocr4 - stdDevR4f;
+
+	// max value = mean + stdDev
+	inRangeMaxl3 = maxLocl3 + stdDevL3f;
+	inRangeMaxl4 = maxLocl4 + stdDevL4f;
+	inRangeMaxr3 = maxLocr3 + stdDevR3f;
+	inRangeMaxr4 = maxLocr4 + stdDevR4f;
 
 	//appy min and max.
 	inRange(grayl3, inRangeMinl3, inRangeMaxl3, grayl3);
