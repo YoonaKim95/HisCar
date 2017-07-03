@@ -177,7 +177,7 @@ void lane_detection(Mat frame)
 
 
 	// calculate min value of inRange
-	inRangeMinl3 = maxLocl3 - stdDevL3f;
+	inRangeMinl3 = maxLocl3 -  stdDevL3f;
 	inRangeMinl4 = maxLocl4 - stdDevL4f;
 	inRangeMinr3 = maxLocr3 - stdDevR3f;
 	inRangeMinr4 = maxLocr4 - stdDevR4f;
@@ -332,6 +332,17 @@ void lane_detection(Mat frame)
 
 
 	circle(frame, Point(X3.at<float>(0, 0), X3.at<float>(1, 0)), 5, LaneColor3, 3, LINE_AA);
+    
+    //inner angle.
+    float innerAngleL3=0;
+    float innerAngleR3=0;
+    float innerA3=0;
+    innerAngleL3 = abs((X3.at<float>(0, 0)-x1)/(X3.at<float>(1, 0)-y1));
+    innerAngleR3 = abs((X3.at<float>(0, 0)-x3)/(X3.at<float>(1, 0)-y3));
+    innerA3 = innerAngleL3 + innerAngleR3;
+    innerA3 = innerA3*180.0/M_PI;
+    cout << "ROI3 : " <<innerA3 << endl; 
+
 
 
 	/*************edge  detection  4 **************/
@@ -480,6 +491,15 @@ void lane_detection(Mat frame)
 		putText(frame, "Turn left" ,Point(100,400) , FONT_HERSHEY_PLAIN, 2, Scalar(LaneColor4), 2, LINE_8);
 	}
 
+    //inner angle.
+    float innerAngleL4=0;
+    float innerAngleR4=0;
+    float innerA4=0;
+    innerAngleL4 = abs((X3.at<float>(0, 0)-x1)/(X3.at<float>(1, 0)-y1));
+    innerAngleR4 = abs((X3.at<float>(0, 0)-x3)/(X3.at<float>(1, 0)-y3));
+    innerA4 = innerAngleL4 + innerAngleR4;
+    innerA4 = innerA4*180.0/M_PI;
+    cout << "ROI4 : " << innerA4 << endl;
 
 
 }
@@ -487,7 +507,7 @@ void lane_detection(Mat frame)
 // Namsoo's storage /Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/
 
 int main() {
-	char title[100] = "mono.mp4";
+	char title[100] = "/Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/mono.mp4";
 	VideoCapture capture(title);
 	Mat frame;
 	Mat origin;
