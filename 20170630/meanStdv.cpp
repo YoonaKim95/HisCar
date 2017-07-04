@@ -340,9 +340,10 @@ void lane_detection(Mat frame)
     float innerA3=0;
     innerAngleL3 = abs((X3.at<float>(0, 0)-x1)/(X3.at<float>(1, 0)-y1));
     innerAngleR3 = abs((X3.at<float>(0, 0)-x3)/(X3.at<float>(1, 0)-y3));
-    innerA3 = innerAngleL3 + innerAngleR3;
-    innerA3 = innerA3*180.0/M_PI;
-    cout << "ROI3 : " <<innerA3 << endl; 
+    innerA3 = innerAngleL3 +  innerAngleR3;
+    innerAngleL3 = innerAngleL3*180.0/M_PI;
+    innerAngleR3 = innerAngleR3*180.0/M_PI;
+    cout << "ROI3 L : " << innerAngleL3<< "ROI3 R" << innerAngleR3<< endl;
 
 
 
@@ -498,9 +499,11 @@ void lane_detection(Mat frame)
     float innerA4=0;
     innerAngleL4 = abs((X3.at<float>(0, 0)-x1)/(X3.at<float>(1, 0)-y1));
     innerAngleR4 = abs((X3.at<float>(0, 0)-x3)/(X3.at<float>(1, 0)-y3));
-    innerA4 = innerAngleL4 + innerAngleR4;
+    innerA4 = innerAngleL4 +  innerAngleR4;
+    innerAngleL4 = innerAngleL4*180.0/M_PI;
+    innerAngleR4 = innerAngleR4*180.0/M_PI;
     innerA4 = innerA4*180.0/M_PI;
-    cout << "ROI4 : " << innerA4 << endl;
+    cout << "ROI4 L : " << innerAngleL4 << "ROI4 R" << innerAngleR4 << endl;
 
 
 }
