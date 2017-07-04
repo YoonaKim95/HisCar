@@ -23,6 +23,9 @@ float slopeR_PRE4 = 0;
 float plb4 = 0;
 float prb4 = 0;
 
+void ROI3(Mat white3,Mat frame, Point rec3_point);
+void ROI4(Mat white4,Mat frame,Point rec4_point);
+
 void lane_detection(Mat frame)
 {
 	Mat gray, smot, sub, hsv, white, yellow, both, canny, left, right,frame_gray;
@@ -41,20 +44,7 @@ void lane_detection(Mat frame)
 	int inRangeMaxl3 = 0,inRangeMaxl4 = 0,inRangeMaxr3 = 0,inRangeMaxr4 = 0;
 	int inRangeMinl3 = 0,inRangeMinl4 = 0,inRangeMinr3 = 0,inRangeMinr4 = 0;
 
-
-	float x1 = 0, x2 = 0, y1 = 0, y2 = 0; //declaration of x,y variables used in lines.
-	float x3 = 0, x4 = 0, y3 = 0, y4 = 0;
-
-	//initiate for the first time when there are no input values.
-	float countright = 0, countleft = 0;
-	float xp1 = 0, xp2 = 0, yp1 = 0, yp2 = 0;
-	float xp3 = 0, xp4 = 0, yp3 = 0, yp4 = 0;
-
-	float a1 = 0, a2 = 0, a3 = 0, a4 = 0;
-	float b1 = 0, b2 = 0, b3 = 0, b4 = 0;
-
-	int x = 0, y = 0;
-	// int width = frame.cols, height = frame.rows / 2;
+    // int width = frame.cols, height = frame.rows / 2;
 
 
 
@@ -191,7 +181,7 @@ void lane_detection(Mat frame)
 
 
 
-	//white1 = frame_gray(rec1);
+	white1 = frame_gray(rec1);
 	white3 = frame_gray(rec3);
 	white4 = frame_gray(rec4);
 
@@ -207,139 +197,164 @@ void lane_detection(Mat frame)
 	imshow("grayr4",grayr4);
 	imshow("grayr3",grayr3);
 
+    //ROI3(white1,frame,rec1_point);
 
 	/*************edge  detection  3 **************/
-	Canny(white3, canny3, 150, 300, 3);
-	imshow("canny3", canny3);
+	
+    ROI3(white3,frame,rec3_point);
+    
+	/*************edge  detection  4 **************/
 
-	vector<Vec4i> lines_R3;
-	vector<Point> pointList_R3;
-
-	//vanishing point VP
-	Point vp_R3;
-
-	//20, 10, 140
-	HoughLinesP(canny3, lines_R3, 1, CV_PI / 180, 20, 10, 140);
-	//Merge part
-
-	for (size_t i = 0; i < lines_R3.size(); i++) {
-		Vec4i l = lines_R3[i];
-
-		float slope = ((float)l[3] - (float)l[1]) / ((float)l[2] - (float)l[0]);
-
-		//lines of left side
-		if (slope >= 0.3 && slope <= 3) {
-			countright++;
-			x1 += l[0];
-			y1 += l[1] + rec3_point.y;
-			x2 += l[2];
-			y2 += l[3] + rec3_point.y;
-		}
-		//lines of right side
-		if (slope <= -0.3 && slope >= -3) {
-			countleft++;
-			x3 += l[0];
-			y3 += l[1] + rec3_point.y;
-			x4 += l[2];
-			y4 += l[3] + rec3_point.y;
-		}
-	}
-	//if it is the first time, put initial values.
-	if (countright == 0) {
-		x1 = xp1;
-		x2 = xp2;
-		y1 = yp1;
-		y2 = yp2;
-	}
-	if (countleft == 0) {
-		x3 = xp3; //xp¥¬ past x.
-		x4 = xp4;
-		y3 = yp3;
-		y4 = yp4;
-	}
-
-	//slopes of right and left.
-	float Rslope = (y2 - y1) / (x2 - x1);
-	float Lslope = (y4 - y3) / (x4 - x3);
-
-	float differenceR = abs(slopeR_PRE3 - abs(Rslope));
-	float differenceL = abs(slopeL_PRE3 - abs(Lslope));
-
-	float rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
-	float lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
-
-	float lastx1 = (0 - rb) / Rslope;
-	float lastx2 = (frame.rows - rb) / Rslope;
-
-	float lastx3 = ((0 - lb) / Lslope);
-	float lastx4 = ((frame.rows - lb) / Lslope);
-
-	a1 = lastx1 + x, a2 = lastx2 + x, a3 = lastx3 + x, a4 = lastx4 + x;
-	b1 = 0, b2 = frame.rows, b3 = 0, b4 = frame.rows;
-
-	bool drawR3 = false;
-
-	/////// right draw //////////
-	if (differenceR >= 0.09 || slopeR_PRE3 == 0) {
-		lastx1 = (0 - rb) / Rslope;
-		lastx2 = (frame.rows - rb) / Rslope;
-		a1 = lastx1 + x;
-		a2 = lastx2 + x;
-		b1 = 0;
-		b2 = frame.rows;
-		prb = rb;
-		slopeR_PRE3 = Rslope;
-
-		line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3);
-
-		drawR3 = true;
-	}
-
-	if (!drawR3) {
-		lastx1 = (0 - prb) / slopeR_PRE3;
-		lastx2 = (frame.rows - prb) / slopeR_PRE3;
-		a1 = lastx1 + x;
-		a2 = lastx2 + x;
-		line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3);
-	}
-	// left
-	drawR3 = false;
-	if (differenceL >= 0.09  || slopeL_PRE3 == 0) {
-		lastx3 = ((0 - lb) / Lslope);
-		lastx4 = ((frame.rows - lb) / Lslope);
-		a3 = lastx3 + x, a4 = lastx4 + x;
-		b3 = 0, b4 = frame.rows;
-		plb = lb;
-		slopeL_PRE3 = Lslope;
-		line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3);
-		//        cout << "a3: " << a3 << "a4: " << a4 << endl;
-
-		drawR3 = true;
-	}
-
-	if (!drawR3) {
-		lastx3 = (0 - plb) / slopeL_PRE3;
-		lastx4 = (frame.rows - plb) / slopeL_PRE3;
-		a3 = lastx3 + x;
-		a4 = lastx4 + x;
-		//        cout << "PREV a3: " << a3 << "a4: " << a4 << endl;
-		line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3);
-	}
+    ROI3(white4,frame,rec4_point);
+    
+   }
 
 
-	float dataA[] = { (b2 - b1) / (a2 - a1), -1, (b4 - b3) / (a4 - a3), -1 };
-	Mat A3(2, 2, CV_32F, dataA);
-	Mat invA3;
-	invert(A3, invA3);
-
-	float dataB[] = { a1*(b2 - b1) / (a2 - a1) - b1, a3*(b4 - b3) / (a4 - a3) - b3 };
-	Mat B3(2, 1, CV_32F, dataB);
-
-	//vanishing point.
-	Mat X3 = invA3*B3;
-
-
-	circle(frame, Point(X3.at<float>(0, 0), X3.at<float>(1, 0)), 5, LaneColor3, 3, LINE_AA);
+void ROI3(Mat white3,Mat frame, Point rec3_point)
+{
+    Mat canny3;
+    int countright, countleft = 0;
+    float x1 = 0, x2 = 0, y1 = 0, y2 = 0; //declaration of x,y variables used in lines.
+    float x3 = 0, x4 = 0, y3 = 0, y4 = 0;
+    float xp1 = 0, xp2 = 0, yp1 = 0, yp2 = 0;
+    float xp3 = 0, xp4 = 0, yp3 = 0, yp4 = 0;
+    
+    float a1 = 0, a2 = 0, a3 = 0, a4 = 0;
+    float b1 = 0, b2 = 0, b3 = 0, b4 = 0;
+    
+    int x = 0, y = 0;
+    
+    Canny(white3, canny3, 150, 300, 3);
+    imshow("canny3", canny3);
+    
+    vector<Vec4i> lines_R3;
+    vector<Point> pointList_R3;
+    
+    //vanishing point VP
+    Point vp_R3;
+    
+    //20, 10, 140
+    HoughLinesP(canny3, lines_R3, 1, CV_PI / 180, 20, 10, 140);
+    //Merge part
+    
+    for (size_t i = 0; i < lines_R3.size(); i++) {
+        Vec4i l = lines_R3[i];
+        
+        float slope = ((float)l[3] - (float)l[1]) / ((float)l[2] - (float)l[0]);
+        
+        //lines of left side
+        if (slope >= 0.3 && slope <= 3) {
+            countright++;
+            x1 += l[0];
+            y1 += l[1] + rec3_point.y;
+            x2 += l[2];
+            y2 += l[3] + rec3_point.y;
+        }
+        //lines of right side
+        if (slope <= -0.3 && slope >= -3) {
+            countleft++;
+            x3 += l[0];
+            y3 += l[1] + rec3_point.y;
+            x4 += l[2];
+            y4 += l[3] + rec3_point.y;
+        }
+    }
+    //if it is the first time, put initial values.
+    if (countright == 0) {
+        x1 = xp1;
+        x2 = xp2;
+        y1 = yp1;
+        y2 = yp2;
+    }
+    if (countleft == 0) {
+        x3 = xp3; //xp¥¬ past x.
+        x4 = xp4;
+        y3 = yp3;
+        y4 = yp4;
+    }
+    
+    //slopes of right and left.
+    float Rslope = (y2 - y1) / (x2 - x1);
+    float Lslope = (y4 - y3) / (x4 - x3);
+    
+    float differenceR = abs(slopeR_PRE3 - abs(Rslope));
+    float differenceL = abs(slopeL_PRE3 - abs(Lslope));
+    
+    float rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
+    float lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
+    
+    float lastx1 = (0 - rb) / Rslope;
+    float lastx2 = (frame.rows - rb) / Rslope;
+    
+    float lastx3 = ((0 - lb) / Lslope);
+    float lastx4 = ((frame.rows - lb) / Lslope);
+    
+    a1 = lastx1 + x, a2 = lastx2 + x, a3 = lastx3 + x, a4 = lastx4 + x;
+    b1 = 0, b2 = frame.rows, b3 = 0, b4 = frame.rows;
+    
+    bool drawR3 = false;
+    
+    /////// right draw //////////
+    if (differenceR >= 0.09 || slopeR_PRE3 == 0) {
+        lastx1 = (0 - rb) / Rslope;
+        lastx2 = (frame.rows - rb) / Rslope;
+        a1 = lastx1 + x;
+        a2 = lastx2 + x;
+        b1 = 0;
+        b2 = frame.rows;
+        prb = rb;
+        slopeR_PRE3 = Rslope;
+        
+        line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3);
+        
+        drawR3 = true;
+    }
+    
+    if (!drawR3) {
+        lastx1 = (0 - prb) / slopeR_PRE3;
+        lastx2 = (frame.rows - prb) / slopeR_PRE3;
+        a1 = lastx1 + x;
+        a2 = lastx2 + x;
+        line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3);
+    }
+    // left
+    drawR3 = false;
+    if (differenceL >= 0.09  || slopeL_PRE3 == 0) {
+        lastx3 = ((0 - lb) / Lslope);
+        lastx4 = ((frame.rows - lb) / Lslope);
+        a3 = lastx3 + x, a4 = lastx4 + x;
+        b3 = 0, b4 = frame.rows;
+        plb = lb;
+        slopeL_PRE3 = Lslope;
+        line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3);
+        //        cout << "a3: " << a3 << "a4: " << a4 << endl;
+        
+        drawR3 = true;
+    }
+    
+    if (!drawR3) {
+        lastx3 = (0 - plb) / slopeL_PRE3;
+        lastx4 = (frame.rows - plb) / slopeL_PRE3;
+        a3 = lastx3 + x;
+        a4 = lastx4 + x;
+        //        cout << "PREV a3: " << a3 << "a4: " << a4 << endl;
+        line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3);
+    }
+    
+    
+    float dataA[] = { (b2 - b1) / (a2 - a1), -1, (b4 - b3) / (a4 - a3), -1 };
+    Mat A3(2, 2, CV_32F, dataA);
+    Mat invA3;
+    invert(A3, invA3);
+    
+    float dataB[] = { a1*(b2 - b1) / (a2 - a1) - b1, a3*(b4 - b3) / (a4 - a3) - b3 };
+    Mat B3(2, 1, CV_32F, dataB);
+    
+    //vanishing point.
+    Mat X3 = invA3*B3;
+    
+    
+    circle(frame, Point(X3.at<float>(0, 0), X3.at<float>(1, 0)), 5, LaneColor3, 3, LINE_AA);
     
     //inner angle.
     float innerAngleL3=0;
@@ -351,173 +366,16 @@ void lane_detection(Mat frame)
     innerAngleL3 = innerAngleL3*180.0/M_PI;
     innerAngleR3 = innerAngleR3*180.0/M_PI;
     cout << "ROI3 L : " << innerAngleL3<< "ROI3 R" << innerAngleR3<< endl;
+    
+    imshow("white3",white3);
+    
+    }
 
-
-	/*************edge  detection  4 **************/
-
-
-	Canny(white4, canny4, 150, 300, 3);
-	imshow("canny4", canny4);
-
-	dilate(white4,white4,Mat(),Point(-1,-1),5);
-	vector<Vec4i> lines_R4;
-	vector<Point> pointList_R4;
-
-	Point vp_R4;
-	float c1_R4, c2_R4;
-
-
-	//20, 10, 140
-	HoughLinesP(canny4, lines_R4, 1, CV_PI / 180, 20, 10, 140);
-	//Merge part
-
-	for (size_t i = 0; i < lines_R4.size(); i++) {
-		Vec4i l = lines_R4[i];
-
-		float slope = ((float)l[3] - (float)l[1]) / ((float)l[2] - (float)l[0]);
-
-		if (slope >= 0.3 && slope <= 3) {
-			//           line(frame, Point(l[0], l[1] + rec4_point.y), Point(l[2], l[3] + rec4_point.y), LaneColor4, 2);
-			countright++;
-			x1 += l[0];
-			y1 += l[1] + rec4_point.y;
-			x2 += l[2];
-			y2 += l[3] + rec4_point.y;
-		}
-		if (slope <= -0.3 && slope >= -3) {
-			//       line(frame, Point(l[0], l[1] + rec4_point.y), Point(l[2], l[3]+ rec4_point.y), LaneColor4, 2);
-			countleft++;
-			x3 += l[0];
-			y3 += l[1] + rec4_point.y;
-			x4 += l[2];
-			y4 += l[3] + rec4_point.y;
-		}
-	}
-
-	/*
-     Rslope = (y2 - y1) / (x2 - x1);
-     Lslope = (y4 - y3) / (x4 - x3);
-
-     rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
-     lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
-
-     lastx1 = (0 - rb) / Rslope;
-     lastx2 = (frame.rows - rb) / Rslope;
-
-     lastx3 = ((0 - lb) / Lslope);
-     lastx4 = ((frame.rows - lb) / Lslope);
-
-     a1 = lastx1 + x, a2 = lastx2 + x, a3 = lastx3 + x, a4 = lastx4 + x;
-     b1 = 0, b2 = frame.rows, b3 = 0, b4 = frame.rows;*/
-
-
-	//slopes of right and left.
-	Rslope = (y2 - y1) / (x2 - x1);
-	Lslope = (y4 - y3) / (x4 - x3);
-
-	differenceR = abs(slopeR_PRE4 - abs(Rslope));
-	differenceL = abs(slopeL_PRE4 - abs(Lslope));
-
-	rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
-	lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
-
-	//float lastx1, lastx2, lastx3, lastx4;
-
-	bool drawR4 = false;
-
-	/////// right draw //////////
-	if (differenceR >= 0.09 || slopeR_PRE4 == 0) {
-		lastx1 = (0 - rb) / Rslope;
-		lastx2 = (frame.rows - rb) / Rslope;
-		a1 = lastx1 + x;
-		a2 = lastx2 + x;
-		b1 = 0;
-		b2 = frame.rows;
-		prb4 = rb;
-		slopeR_PRE4 = Rslope;
-
-		line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor4, 3);
-
-		drawR4 = true;
-	}
-
-	if (!drawR4) {
-		lastx1 = (0 - prb4) / slopeR_PRE4;
-		lastx2 = (frame.rows - prb4) / slopeR_PRE4;
-		a1 = lastx1 + x;
-		a2 = lastx2 + x;
-		line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor4, 3);
-	}
-	// left
-	drawR4 = false;
-	if (differenceL >= 0.09 || slopeL_PRE4 == 0) {
-		lastx3 = ((0 - lb) / Lslope);
-		lastx4 = ((frame.rows - lb) / Lslope);
-		a3 = lastx3 + x, a4 = lastx4 + x;
-		b3 = 0, b4 = frame.rows;
-		plb4 = lb;
-		slopeL_PRE4 = Lslope;
-		line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor4, 3);
-		//cout << "a3: " << a3 << " a4: " << a4 << endl;
-
-		drawR4 = true;
-	}
-
-	if (!drawR4) {
-		lastx3 = (0 - plb4) / slopeL_PRE4;
-		lastx4 = (frame.rows - plb4) / slopeL_PRE4;
-		a3 = lastx3 + x;
-		a4 = lastx4 + x;
-		//cout << "PREV a3: " << a3 << " a4: " << a4 << endl;
-		line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor4, 3);
-	}
-
-
-	float dataA4[] = { (b2 - b1) / (a2 - a1), -1, (b4 - b3) / (a4 - a3), -1 };
-	Mat A4(2, 2, CV_32F, dataA4);
-	Mat invA4;
-	invert(A4, invA4);
-
-	float dataB4[] = { a1*(b2 - b1) / (a2 - a1) - b1, a3*(b4 - b3) / (a4 - a3) - b3 };
-	Mat B4(2, 1, CV_32F, dataB4);
-
-	Mat X4 = invA4*B4;
-
-	//  line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor4, 3);
-	//  line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor4, 3);
-
-
-	circle(frame, Point(X4.at<float>(0, 0), X4.at<float>(1, 0)), 5, LaneColor4, 3, LINE_AA);
-
-
-	if(((X4.at<float>(0, 0)>frame.cols/2)||(X3.at<float>(0, 0)>frame.cols/2)))
-	{
-		putText(frame, "Turn right" ,Point(100,400) , FONT_HERSHEY_PLAIN, 2, Scalar(LaneColor4), 2, LINE_8);
-	}
-	else if(((X4.at<float>(0, 0)<frame.cols/2)&&(X3.at<float>(0, 0)<frame.cols/2)))
-	{
-		putText(frame, "Turn left" ,Point(100,400) , FONT_HERSHEY_PLAIN, 2, Scalar(LaneColor4), 2, LINE_8);
-	}
-
-    //inner angle.
-    float innerAngleL4=0;
-    float innerAngleR4=0;
-    float innerA4=0;
-    innerAngleL4 = abs((X3.at<float>(0, 0)-x1)/(X3.at<float>(1, 0)-y1));
-    innerAngleR4 = abs((X3.at<float>(0, 0)-x3)/(X3.at<float>(1, 0)-y3));
-    innerA4 = innerAngleL4 +  innerAngleR4;
-    innerAngleL4 = innerAngleL4*180.0/M_PI;
-    innerAngleR4 = innerAngleR4*180.0/M_PI;
-    innerA4 = innerA4*180.0/M_PI;
-    cout << "ROI4 L : " << innerAngleL4 << "ROI4 R : " << innerAngleR4 << endl;
-
-
-}
 
 // Namsoo's storage /Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/
 
 int main() {
-	char title[100] = "mono.mp4";
+	char title[100] = "/Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/mono.mp4";
 	VideoCapture capture(title);
 	Mat frame;
 	Mat origin;
