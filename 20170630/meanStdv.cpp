@@ -268,7 +268,14 @@ void lane_detection(Mat frame)
 	float rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
 	float lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
 
-	float lastx1, lastx2, lastx3, lastx4;
+	float lastx1 = (0 - rb) / Rslope;
+	float lastx2 = (frame.rows - rb) / Rslope;
+
+	float lastx3 = ((0 - lb) / Lslope);
+	float lastx4 = ((frame.rows - lb) / Lslope);
+
+	a1 = lastx1 + x, a2 = lastx2 + x, a3 = lastx3 + x, a4 = lastx4 + x;
+	b1 = 0, b2 = frame.rows, b3 = 0, b4 = frame.rows;
 
 	bool drawR3 = false;
 
@@ -344,7 +351,6 @@ void lane_detection(Mat frame)
     innerAngleL3 = innerAngleL3*180.0/M_PI;
     innerAngleR3 = innerAngleR3*180.0/M_PI;
     cout << "ROI3 L : " << innerAngleL3<< "ROI3 R" << innerAngleR3<< endl;
-
 
 
 	/*************edge  detection  4 **************/
@@ -503,7 +509,7 @@ void lane_detection(Mat frame)
     innerAngleL4 = innerAngleL4*180.0/M_PI;
     innerAngleR4 = innerAngleR4*180.0/M_PI;
     innerA4 = innerA4*180.0/M_PI;
-    cout << "ROI4 L : " << innerAngleL4 << "ROI4 R" << innerAngleR4 << endl;
+    cout << "ROI4 L : " << innerAngleL4 << "ROI4 R : " << innerAngleR4 << endl;
 
 
 }
@@ -511,7 +517,7 @@ void lane_detection(Mat frame)
 // Namsoo's storage /Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/
 
 int main() {
-	char title[100] = "/Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/mono.mp4";
+	char title[100] = "mono.mp4";
 	VideoCapture capture(title);
 	Mat frame;
 	Mat origin;
