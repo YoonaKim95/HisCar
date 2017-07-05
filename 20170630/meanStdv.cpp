@@ -19,6 +19,7 @@ float slopeR_Pre = 0;
 float slope_Pre = 0;
 
 Mat ROI(Mat white3,Mat frame, Point rec3_point);
+void getMinMax(Mat roi, int* min, int* max);
 
 
 void lane_detection(Mat frame)
@@ -114,54 +115,11 @@ void lane_detection(Mat frame)
     grayr3 = frame_gray(right_rec3);
     grayr4 = frame_gray(right_rec4);
     
-    // showing the brightest point
-    
-    	Point maxPointl3,maxPointl4,maxPointr3,maxPointr4;
-    	double maxLocl3=0,maxLocl4=0,maxLocr3=0,maxLocr4=0;
-    
-    
-    	minMaxLoc(grayl3, 0,&maxLocl3,0,&maxPointl3);
-        minMaxLoc(grayl4, 0,&maxLocl4,0,&maxPointl4);
-        minMaxLoc(grayr3, 0,&maxLocr3,0,&maxPointr3);
-        minMaxLoc(grayr4, 0,&maxLocr4,0,&maxPointr4);
-    
-    //mark circle to each seperated ROI.
-    
-    circle(frame, rec3_point + maxPointl3, 2, Scalar(255,10,10), 5, 8, 0);
-    circle(frame, rec4_point + maxPointl4, 2, Scalar(255,10,10), 5, 8, 0);
-    circle(frame, rec3_Rpoint + maxPointr3, 2, Scalar(255,10,10), 5, 8, 0);
-    circle(frame, rec4_Rpoint + maxPointr4, 2, Scalar(255,10,10), 5, 8, 0);
-    
-    inRangeMaxl3 = maxLocl3;
-    inRangeMaxl4 = maxLocl4;
-    inRangeMaxr3 = maxLocr3;
-    inRangeMaxr4 = maxLocr4;
-    
-    // Calculate mean and stdDev of ROI
-    Scalar meanL3,meanR3, meanL4, meanR4;
-    Scalar stdDevL3,stdDevR3, stdDevL4, stdDevR4;
-    
-    meanStdDev(grayl3, meanL3, stdDevL3);
-    meanStdDev(grayl4, meanL4, stdDevL4);
-    meanStdDev(grayr3, meanR3, stdDevR3);
-    meanStdDev(grayr4, meanR4, stdDevR4);
-    
-    meanL3f = meanL3.val[0];
-    meanL4f = meanL4.val[0];
-    meanR3f = meanR3.val[0];
-    meanR4f = meanR4.val[0];
-    
-    stdDevL3f = stdDevL3.val[0];
-    stdDevL4f = stdDevL4.val[0];
-    stdDevR3f = stdDevR3.val[0];
-    stdDevR4f = stdDevR4.val[0];
-    
-    // calculate min value of inRange
-    inRangeMinl3 = maxLocl3 -  stdDevL3f;
-    inRangeMinl4 = maxLocl4 - stdDevL4f;
-    inRangeMinr3 = maxLocr3 - stdDevR3f;
-    inRangeMinr4 = maxLocr4 - stdDevR4f;
-    
+    getMinMax(grayl3, &inRangeMinl3, &inRangeMaxl3);
+    getMinMax(grayl4, &inRangeMinl4, &inRangeMaxl4);
+    getMinMax(grayr3, &inRangeMinr3, &inRangeMaxr3);
+    getMinMax(grayr4, &inRangeMinr4, &inRangeMaxr4);
+
     //appy min and max.
     inRange(grayl3, inRangeMinl3, inRangeMaxl3, grayl3);
     inRange(grayl4, inRangeMinl4, inRangeMaxl4, grayl4);
@@ -310,10 +268,34 @@ Mat ROI(Mat white3,Mat frame, Point rec3_point)
 
 }
 
+void getMinMax(Mat roi, int* min, int* max)
+{
+  // showing the brightest point
+  float meanVal = 0, stdDevVal = 0;
+  Point maxPoint;
+  double maxPixelVal;
+  Scalar mean;
+  Scalar stdDev;
+
+  // find min and max value and point
+  minMaxLoc(roi, 0,&maxPixelVal,0,&maxPoint);
+
+  // Calculate mean and stdDev of ROI
+  meanStdDev(roi, mean, stdDev);
+  meanVal = mean.val[0];
+  stdDevVal = stdDev.val[0];
+
+  // calculate min value of inRange
+  *min = maxPixelVal - stdDevVal;
+
+  // max value = mean + stdDev
+  *max = maxPixelVal;
+}
+
 // Namsoo's storage Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/
 
 int main() {
-    char title[100] = "/Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/mono.mp4";
+    char title[100] = "mono.mp4";
     VideoCapture capture(title);
     Mat frame;
     Mat origin;
