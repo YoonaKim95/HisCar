@@ -1,3 +1,4 @@
+//#include "opencv2\highgui\highgui.hpp"
 #include "opencv2/opencv.hpp"
 #include <cmath>
 #include "opencv/cv.hpp"
@@ -13,209 +14,203 @@ using namespace cv;
 #define LaneColor3 Scalar(251,10,255)
 #define LaneColor4 Scalar(255,200,20)
 
-float slopeL_PRE3 = 0;
-float slopeR_PRE3 = 0;
-float plb = 0;
-float prb = 0;
 
-float slopeL_PRE4 = 0;
-float slopeR_PRE4 = 0;
-float plb4 = 0;
-float prb4 = 0;
+float slopeR_Pre = 0;
+float slope_Pre = 0;
 
-void ROI3(Mat white3,Mat frame, Point rec3_point);
-void ROI4(Mat white4,Mat frame,Point rec4_point);
+Mat ROI(Mat white3,Mat frame, Point rec3_point);
+
 
 void lane_detection(Mat frame)
 {
-	Mat gray, smot, sub, hsv, white, yellow, both, canny, left, right,frame_gray;
-	Mat sub1, sub2, sub3, sub4, smot1, smot2, smot3, smot4, gray1, gray2, gray3, gray4, white1, white2, white3, white4,gray_original_sub;
-	Mat canny1, canny2, canny3, canny4, left1, left2, left3, left4, right1, right2, right3, right4,hlsImg,hist;
-	Mat grayl3,grayl4,grayr3,grayr4; //gray areas.
-
-	float meanL3f,meanR3f, meanL4f, meanR4f;
-	float stdDevL3f,stdDevR3f, stdDevL4f, stdDevR4f;
-
-	vector<Mat> channels(hlsImg.channels()); // vector Mat for histogram
-	vector<Vec4i> lines;
-	//string A[100] = {gray1,sub1,smot1};
-
-	// Variable for white detection
-	int inRangeMaxl3 = 0,inRangeMaxl4 = 0,inRangeMaxr3 = 0,inRangeMaxr4 = 0;
-	int inRangeMinl3 = 0,inRangeMinl4 = 0,inRangeMinr3 = 0,inRangeMinr4 = 0;
-
-    // int width = frame.cols, height = frame.rows / 2;
-
-
-
-	// resolution: 640 * 480
-	//// mono.wmv :
-	int interest_y = 168; //ROI value of y
-	int interest_x = 0;
-	int width = frame.cols - interest_x; //width of ROI
-	int height = frame.rows - interest_y; //height of ROI
-	int halfWidth = width / 2;
-	int subROIHeight = height / 16;  // Calculate the height of sub_ROIs
-
-	frame_gray = frame.clone(); //clone one frame. It will be used when it finds the brightest value.
-	cvtColor(frame_gray, frame_gray, CV_BGR2GRAY);
-
-	//Point of center in the frame.
-	circle(frame, Point(frame.cols/2,frame.rows/4), 5, Scalar(0,0,0), 3, LINE_AA);
-
-
-	//ROIs of each parts.
-
-	Rect rec(interest_x, interest_y, width, height);  // overall ROI
-
-	Point rec1_point(interest_x, interest_y);
-	Point rec1_Rpoint(interest_x+halfWidth, interest_y); /// Rpoint is the start point of the right ROI
-	Rect rec1(rec1_point, Size(width, subROIHeight * 2));
-
-	Point rec2_point(interest_x, interest_y + subROIHeight);
-	Point rec2_Rpoint(interest_x+halfWidth, interest_y + subROIHeight);
-	Rect rec2(rec2_point, Size(width, subROIHeight * 2)); // ROI 2
-
-	Point rec3_point(interest_x, interest_y + subROIHeight * 3);
-	Point rec3_Rpoint(interest_x+halfWidth, interest_y + subROIHeight * 3);
-	Rect rec3(rec3_point, Size(width, subROIHeight * 3)); // ROI3
-
-	Point rec4_point(interest_x, interest_y + subROIHeight * 6);
-	Point rec4_Rpoint(interest_x+halfWidth, interest_y + subROIHeight * 6);
-	Rect rec4(rec4_point, Size(width, subROIHeight * 10));
-
-	Rect left_rec1(rec1_point, Size(halfWidth , subROIHeight * 2));
-	Rect left_rec2(rec2_point, Size(halfWidth , subROIHeight * 2));
-	Rect left_rec3(rec3_point, Size(halfWidth , subROIHeight * 3));
-	Rect left_rec4(rec4_point, Size(halfWidth , subROIHeight * 10));
-
-	Rect right_rec1(rec1_Rpoint, Size(halfWidth , subROIHeight * 2));
-	Rect right_rec2(rec2_Rpoint, Size(halfWidth , subROIHeight * 2));
-	Rect right_rec3(rec3_Rpoint, Size(halfWidth , subROIHeight * 3));
-	Rect right_rec4(rec4_Rpoint, Size(halfWidth , subROIHeight * 10));
-
-	sub = frame(rec);
-	sub1 = frame(rec1);
-	sub2 = frame(rec2);
-	sub3 = frame(rec3);
-	sub4 = frame(rec4);
-
-	//show Left and Right ROI
-
-	// bgr2gray
-	cvtColor(sub, gray, CV_BGR2GRAY);
-
-	//parts
-	cvtColor(sub1, gray1, CV_BGR2GRAY);
-	cvtColor(sub2, gray2, CV_BGR2GRAY);
-	cvtColor(sub3, gray3, CV_BGR2GRAY);
-	cvtColor(sub4, gray4, CV_BGR2GRAY);
-
-	//apply gray parts to frame_gray.
-
-	grayl3 = frame_gray(left_rec3);
-	grayl4 = frame_gray(left_rec4);
-	grayr3 = frame_gray(right_rec3);
-	grayr4 = frame_gray(right_rec4);
-
-
-
-	// showing the brightest point
-	Point maxPointl3,maxPointl4,maxPointr3,maxPointr4;
-	double maxLocl3=0,maxLocl4=0,maxLocr3=0,maxLocr4=0;
-
-
-	minMaxLoc(grayl3, 0,&maxLocl3,0,&maxPointl3);
-	minMaxLoc(grayl4, 0,&maxLocl4,0,&maxPointl4);
-	minMaxLoc(grayr3, 0,&maxLocr3,0,&maxPointr3);
-	minMaxLoc(grayr4, 0,&maxLocr4,0,&maxPointr4);
-
-	//mark circle to each seperated ROI.
-
-	circle(frame, rec3_point + maxPointl3, 2, Scalar(255,10,10), 5, 8, 0);
-	circle(frame, rec4_point + maxPointl4, 2, Scalar(255,10,10), 5, 8, 0);
-	circle(frame, rec3_Rpoint + maxPointr3, 2, Scalar(255,10,10), 5, 8, 0);
-	circle(frame, rec4_Rpoint + maxPointr4, 2, Scalar(255,10,10), 5, 8, 0);
-
-	inRangeMaxl3 = maxLocl3;
-	inRangeMaxl4 = maxLocl4;
-	inRangeMaxr3 = maxLocr3;
-	inRangeMaxr4 = maxLocr4;
-
-	// Calculate mean and stdDev of ROI
-	Scalar meanL3,meanR3, meanL4, meanR4;
-	Scalar stdDevL3,stdDevR3, stdDevL4, stdDevR4;
-
-	meanStdDev(grayl3, meanL3, stdDevL3);
-	meanStdDev(grayl4, meanL4, stdDevL4);
-	meanStdDev(grayr3, meanR3, stdDevR3);
-	meanStdDev(grayr4, meanR4, stdDevR4);
-
-	meanL3f = meanL3.val[0];
-	meanL4f = meanL4.val[0];
-	meanR3f = meanR3.val[0];
-	meanR4f = meanR4.val[0];
-
-	stdDevL3f = stdDevL3.val[0];
-	stdDevL4f = stdDevL4.val[0];
-	stdDevR3f = stdDevR3.val[0];
-	stdDevR4f = stdDevR4.val[0];
-
-	// calculate min value of inRange
-	inRangeMinl3 = maxLocl3 -  stdDevL3f;
-	inRangeMinl4 = maxLocl4 - stdDevL4f;
-	inRangeMinr3 = maxLocr3 - stdDevR3f;
-	inRangeMinr4 = maxLocr4 - stdDevR4f;
-
-	// max value = mean + stdDev
-	inRangeMaxl3 = maxLocl3 + stdDevL3f;
-	inRangeMaxl4 = maxLocl4 + stdDevL4f;
-	inRangeMaxr3 = maxLocr3 + stdDevR3f;
-	inRangeMaxr4 = maxLocr4 + stdDevR4f;
-
-	//appy min and max.
-	inRange(grayl3, inRangeMinl3, inRangeMaxl3, grayl3);
-	inRange(grayl4, inRangeMinl4, inRangeMaxl4, grayl4);
-	inRange(grayr3, inRangeMinr3, inRangeMaxr3, grayr3);
-	inRange(grayr4, inRangeMinr4, inRangeMaxr4, grayr4);
-
-
-
-	white1 = frame_gray(rec1);
-	white3 = frame_gray(rec3);
-	white4 = frame_gray(rec4);
-
-	//dialte and erode white part to enlarge the part.
-	dilate(white4,white4,Mat(),Point(-1,-1),3);
-	erode(white4, white4, Mat());
-	dilate(white3,white3,Mat(),Point(-1,-1),3);
-	erode(white3, white3, Mat());
-
-
-
-	imshow("gray_frame",frame_gray);
-	imshow("grayr4",grayr4);
-	imshow("grayr3",grayr3);
-
-    //ROI3(white1,frame,rec1_point);
-
-	/*************edge  detection  3 **************/
-	
-    ROI3(white3,frame,rec3_point);
+    Mat gray, smot, sub, hsv, white, yellow, both, canny, left, right,frame_gray;
+    Mat sub1, sub2, sub3, sub4, smot1, smot2, smot3, smot4, gray1, gray2, gray3, gray4, white1, white2, white3, white4,gray_original_sub;
+    Mat canny1, canny2, canny3, canny4, left1, left2, left3, left4, right1, right2, right3, right4,hlsImg,hist;
+    Mat grayl3,grayl4,grayr3,grayr4; //gray areas.
     
-	/*************edge  detection  4 **************/
-
-    ROI3(white4,frame,rec4_point);
+    vector<Mat> channels(hlsImg.channels()); // vector Mat for histogram
+    vector<Vec4i> lines;
+    //string A[100] = {gray1,sub1,smot1};
     
-   }
+    // Variable for white detection
+    int inRangeMaxl3 = 0,inRangeMaxl4 = 0,inRangeMaxr3 = 0,inRangeMaxr4 = 0;
+    int inRangeMinl3 = 0,inRangeMinl4 = 0,inRangeMinr3 = 0,inRangeMinr4 = 0;
+    
+    float meanL3f,meanR3f, meanL4f, meanR4f;
+    float stdDevL3f,stdDevR3f, stdDevL4f, stdDevR4f;
+    
+       // int width = frame.cols, height = frame.rows / 2;
+    
+    
+    
+    // resolution: 640 * 480
+    //// mono.wmv :
+    int interest_y = 168; //ROI value of y
+    int interest_x = 0;
+    int width = frame.cols - interest_x; //width of ROI
+    int height = frame.rows - interest_y; //height of ROI
+    int halfWidth = width / 2;
+    int subROIHeight = height / 16;  // Calculate the height of sub_ROIs
+    
+    frame_gray = frame.clone(); //clone one frame. It will be used when it finds the brightest value.
+    cvtColor(frame_gray, frame_gray, CV_BGR2GRAY);
+    
+    //Point of center in the frame.
+    circle(frame, Point(frame.cols/2,frame.rows/4), 5, Scalar(0,0,0), 3, LINE_AA);
+    
+    
+    //ROIs of each parts.
+    
+    Rect rec(interest_x, interest_y, width, height);  // overall ROI
+    
+    Point rec1_point(interest_x, interest_y);
+    Point rec1_Rpoint(interest_x+halfWidth, interest_y); /// Rpoint is the start point of the right ROI
+    Rect rec1(rec1_point, Size(width, subROIHeight * 2));
+    
+    Point rec2_point(interest_x, interest_y + subROIHeight);
+    Point rec2_Rpoint(interest_x+halfWidth, interest_y + subROIHeight);
+    Rect rec2(rec2_point, Size(width, subROIHeight * 2)); // ROI 2
+    
+    Point rec3_point(interest_x, interest_y + subROIHeight * 3);
+    Point rec3_Rpoint(interest_x+halfWidth, interest_y + subROIHeight * 3);
+    Rect rec3(rec3_point, Size(width, subROIHeight * 3)); // ROI3
+    
+    Point rec4_point(interest_x, interest_y + subROIHeight * 6);
+    Point rec4_Rpoint(interest_x+halfWidth, interest_y + subROIHeight * 6);
+    Rect rec4(rec4_point, Size(width, subROIHeight * 10));
+    
+    Rect left_rec1(rec1_point, Size(halfWidth , subROIHeight * 2));
+    Rect left_rec2(rec2_point, Size(halfWidth , subROIHeight * 2));
+    Rect left_rec3(rec3_point, Size(halfWidth , subROIHeight * 3)); 
+    Rect left_rec4(rec4_point, Size(halfWidth , subROIHeight * 10));
+    
+    Rect right_rec1(rec1_Rpoint, Size(halfWidth , subROIHeight * 2)); 
+    Rect right_rec2(rec2_Rpoint, Size(halfWidth , subROIHeight * 2)); 
+    Rect right_rec3(rec3_Rpoint, Size(halfWidth , subROIHeight * 3));
+    Rect right_rec4(rec4_Rpoint, Size(halfWidth , subROIHeight * 10));
+    
+    sub = frame(rec);
+    sub1 = frame(rec1);
+    sub2 = frame(rec2);
+    sub3 = frame(rec3);
+    sub4 = frame(rec4);
+    
+    
+    //show Left and Right ROI
 
+    // bgr2gray
+    cvtColor(sub, gray, CV_BGR2GRAY);
+    
+    //parts
+    cvtColor(sub1, gray1, CV_BGR2GRAY);
+    cvtColor(sub2, gray2, CV_BGR2GRAY);
+    cvtColor(sub3, gray3, CV_BGR2GRAY);
+    cvtColor(sub4, gray4, CV_BGR2GRAY);
+    
+    //apply gray parts to frame_gray.
+    
+    grayl3 = frame_gray(left_rec3);
+    grayl4 = frame_gray(left_rec4);
+    grayr3 = frame_gray(right_rec3);
+    grayr4 = frame_gray(right_rec4);
+    
+    // showing the brightest point
+    
+    	Point maxPointl3,maxPointl4,maxPointr3,maxPointr4;
+    	double maxLocl3=0,maxLocl4=0,maxLocr3=0,maxLocr4=0;
+    
+    
+    	minMaxLoc(grayl3, 0,&maxLocl3,0,&maxPointl3);
+        minMaxLoc(grayl4, 0,&maxLocl4,0,&maxPointl4);
+        minMaxLoc(grayr3, 0,&maxLocr3,0,&maxPointr3);
+        minMaxLoc(grayr4, 0,&maxLocr4,0,&maxPointr4);
+    
+    //mark circle to each seperated ROI.
+    
+    circle(frame, rec3_point + maxPointl3, 2, Scalar(255,10,10), 5, 8, 0);
+    circle(frame, rec4_point + maxPointl4, 2, Scalar(255,10,10), 5, 8, 0);
+    circle(frame, rec3_Rpoint + maxPointr3, 2, Scalar(255,10,10), 5, 8, 0);
+    circle(frame, rec4_Rpoint + maxPointr4, 2, Scalar(255,10,10), 5, 8, 0);
+    
+    inRangeMaxl3 = maxLocl3;
+    inRangeMaxl4 = maxLocl4;
+    inRangeMaxr3 = maxLocr3;
+    inRangeMaxr4 = maxLocr4;
+    
+    // Calculate mean and stdDev of ROI
+    Scalar meanL3,meanR3, meanL4, meanR4;
+    Scalar stdDevL3,stdDevR3, stdDevL4, stdDevR4;
+    
+    meanStdDev(grayl3, meanL3, stdDevL3);
+    meanStdDev(grayl4, meanL4, stdDevL4);
+    meanStdDev(grayr3, meanR3, stdDevR3);
+    meanStdDev(grayr4, meanR4, stdDevR4);
+    
+    meanL3f = meanL3.val[0];
+    meanL4f = meanL4.val[0];
+    meanR3f = meanR3.val[0];
+    meanR4f = meanR4.val[0];
+    
+    stdDevL3f = stdDevL3.val[0];
+    stdDevL4f = stdDevL4.val[0];
+    stdDevR3f = stdDevR3.val[0];
+    stdDevR4f = stdDevR4.val[0];
+    
+    // calculate min value of inRange
+    inRangeMinl3 = maxLocl3 -  stdDevL3f;
+    inRangeMinl4 = maxLocl4 - stdDevL4f;
+    inRangeMinr3 = maxLocr3 - stdDevR3f;
+    inRangeMinr4 = maxLocr4 - stdDevR4f;
+    
+    //appy min and max.
+    inRange(grayl3, inRangeMinl3, inRangeMaxl3, grayl3);
+    inRange(grayl4, inRangeMinl4, inRangeMaxl4, grayl4);
+    inRange(grayr3, inRangeMinr3, inRangeMaxr3, grayr3);
+    inRange(grayr4, inRangeMinr4, inRangeMaxr4, grayr4);
+    
+    
+    
+    white1 = frame_gray(rec1);
+    white3 = frame_gray(rec3);
+    white4 = frame_gray(rec4);
+    
+    //dialte and erode white part to enlarge the part.
+    dilate(white4,white4,Mat(),Point(-1,-1),3);
+    erode(white4, white4, Mat());
+    dilate(white3,white3,Mat(),Point(-1,-1),3);
+    erode(white3, white3, Mat());
+    
+    
+    /*************edge  detection  3 **************/
+    Mat X3 = ROI(white3,frame,rec3_point);
+    /*************edge  detection  4 **************/
+    Mat X4 = ROI(white4,frame,rec4_point);
+   
+    
+    if(((X4.at<float>(0, 0)>frame.cols/2)||(X3.at<float>(0, 0)>frame.cols/2)))
+    {
+        putText(frame, "Turn right" ,Point(100,400) , FONT_HERSHEY_PLAIN, 2, Scalar(LaneColor4), 2, LINE_8);
+    }
+    else if(((X4.at<float>(0, 0)<frame.cols/2)&&(X3.at<float>(0, 0)<frame.cols/2)))
+    {
+        putText(frame, "Turn left" ,Point(100,400) , FONT_HERSHEY_PLAIN, 2, Scalar(LaneColor4), 2, LINE_8);
+    }
+    
+    imshow("frame_gray",frame_gray);
+    
+    
+}
 
-void ROI3(Mat white3,Mat frame, Point rec3_point)
+Mat ROI(Mat white3,Mat frame, Point rec3_point)
 {
+    
     Mat canny3;
-    int countright, countleft = 0;
+    
     float x1 = 0, x2 = 0, y1 = 0, y2 = 0; //declaration of x,y variables used in lines.
     float x3 = 0, x4 = 0, y3 = 0, y4 = 0;
+    
+    //initiate for the first time when there are no input values.
+    float countright = 0, countleft = 0;
     float xp1 = 0, xp2 = 0, yp1 = 0, yp2 = 0;
     float xp3 = 0, xp4 = 0, yp3 = 0, yp4 = 0;
     
@@ -240,6 +235,7 @@ void ROI3(Mat white3,Mat frame, Point rec3_point)
     for (size_t i = 0; i < lines_R3.size(); i++) {
         Vec4i l = lines_R3[i];
         
+        //get slope.
         float slope = ((float)l[3] - (float)l[1]) / ((float)l[2] - (float)l[0]);
         
         //lines of left side
@@ -277,11 +273,9 @@ void ROI3(Mat white3,Mat frame, Point rec3_point)
     float Rslope = (y2 - y1) / (x2 - x1);
     float Lslope = (y4 - y3) / (x4 - x3);
     
-    float differenceR = abs(slopeR_PRE3 - abs(Rslope));
-    float differenceL = abs(slopeL_PRE3 - abs(Lslope));
-    
     float rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
     float lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
+    
     
     float lastx1 = (0 - rb) / Rslope;
     float lastx2 = (frame.rows - rb) / Rslope;
@@ -289,57 +283,10 @@ void ROI3(Mat white3,Mat frame, Point rec3_point)
     float lastx3 = ((0 - lb) / Lslope);
     float lastx4 = ((frame.rows - lb) / Lslope);
     
+    
+    //point of line will be drawn.
     a1 = lastx1 + x, a2 = lastx2 + x, a3 = lastx3 + x, a4 = lastx4 + x;
     b1 = 0, b2 = frame.rows, b3 = 0, b4 = frame.rows;
-    
-    bool drawR3 = false;
-    
-    /////// right draw //////////
-    if (differenceR >= 0.09 || slopeR_PRE3 == 0) {
-        lastx1 = (0 - rb) / Rslope;
-        lastx2 = (frame.rows - rb) / Rslope;
-        a1 = lastx1 + x;
-        a2 = lastx2 + x;
-        b1 = 0;
-        b2 = frame.rows;
-        prb = rb;
-        slopeR_PRE3 = Rslope;
-        
-        line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3);
-        
-        drawR3 = true;
-    }
-    
-    if (!drawR3) {
-        lastx1 = (0 - prb) / slopeR_PRE3;
-        lastx2 = (frame.rows - prb) / slopeR_PRE3;
-        a1 = lastx1 + x;
-        a2 = lastx2 + x;
-        line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3);
-    }
-    // left
-    drawR3 = false;
-    if (differenceL >= 0.09  || slopeL_PRE3 == 0) {
-        lastx3 = ((0 - lb) / Lslope);
-        lastx4 = ((frame.rows - lb) / Lslope);
-        a3 = lastx3 + x, a4 = lastx4 + x;
-        b3 = 0, b4 = frame.rows;
-        plb = lb;
-        slopeL_PRE3 = Lslope;
-        line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3);
-        //        cout << "a3: " << a3 << "a4: " << a4 << endl;
-        
-        drawR3 = true;
-    }
-    
-    if (!drawR3) {
-        lastx3 = (0 - plb) / slopeL_PRE3;
-        lastx4 = (frame.rows - plb) / slopeL_PRE3;
-        a3 = lastx3 + x;
-        a4 = lastx4 + x;
-        //        cout << "PREV a3: " << a3 << "a4: " << a4 << endl;
-        line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3);
-    }
     
     
     float dataA[] = { (b2 - b1) / (a2 - a1), -1, (b4 - b3) / (a4 - a3), -1 };
@@ -354,57 +301,48 @@ void ROI3(Mat white3,Mat frame, Point rec3_point)
     Mat X3 = invA3*B3;
     
     
+    line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3);
+    line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3);
     circle(frame, Point(X3.at<float>(0, 0), X3.at<float>(1, 0)), 5, LaneColor3, 3, LINE_AA);
     
-    //inner angle.
-    float innerAngleL3=0;
-    float innerAngleR3=0;
-    float innerA3=0;
-    innerAngleL3 = abs((X3.at<float>(0, 0)-x1)/(X3.at<float>(1, 0)-y1));
-    innerAngleR3 = abs((X3.at<float>(0, 0)-x3)/(X3.at<float>(1, 0)-y3));
-    innerA3 = innerAngleL3 +  innerAngleR3;
-    innerAngleL3 = innerAngleL3*180.0/M_PI;
-    innerAngleR3 = innerAngleR3*180.0/M_PI;
-    cout << "ROI3 L : " << innerAngleL3<< "ROI3 R" << innerAngleR3<< endl;
+    return X3;
     
-    imshow("white3",white3);
-    
-    }
 
+}
 
-// Namsoo's storage /Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/
+// Namsoo's storage Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/
 
 int main() {
-	char title[100] = "/Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/mono.mp4";
-	VideoCapture capture(title);
-	Mat frame;
-	Mat origin;
-
-	int key, frameNum = 1;
-	int frame_rate = 30;
-
-	capture.read(frame);
-
-	// videoRead
-	while (capture.read(frame)) {
-
-		origin = frame.clone();
-		lane_detection(frame);
-
-		imshow("frame", frame); //show the original frame
-		//imshow("origin",origin);
-		key = waitKey(frame_rate);
-		if (key == 32) {
-			if (frame_rate == 30)
-				frame_rate = 0;
-			else
-				frame_rate = 30;
-		}
-		else if (key == 27) {
-			break;
-		}
-		frameNum++;
-	}
-
-	return 0;
+    char title[100] = "/Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/mono.mp4";
+    VideoCapture capture(title);
+    Mat frame;
+    Mat origin;
+    
+    int key, frameNum = 1;
+    int frame_rate = 30;
+    
+    capture.read(frame);
+    
+    // videoRead
+    while (capture.read(frame)) {
+        
+        origin = frame.clone();
+        lane_detection(frame);
+        
+        imshow("frame", frame); //show the original frame
+        //imshow("origin",origin);
+        key = waitKey(frame_rate);
+        if (key == 32) {
+            if (frame_rate == 30)
+                frame_rate = 0;
+            else
+                frame_rate = 30;
+        }
+        else if (key == 27) {
+            break;
+        }
+        frameNum++;
+    }
+    
+    return 0;
 }
