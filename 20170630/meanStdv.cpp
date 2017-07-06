@@ -14,22 +14,19 @@ using namespace cv;
 #define LaneColor3 Scalar(251,10,255)
 #define LaneColor4 Scalar(255,200,20)
 
-
 float slopeR_Pre = 0;
 float slope_Pre = 0;
 
-Mat ROI(Mat white3,Mat frame, Point rec3_point,int color);
-void getMinMax(Mat roi, int* min, int* max);
+Mat ROI(Mat white3,Mat frame, Point rec3_point,int color,int wayToGo);
+void getMinMax(Mat roi, int* min, int* max, int color);
 
 
 void lane_detection(Mat frame)
 {
     Mat gray, smot, sub, hsv, white, yellow, both, canny, left, right,frame_gray;
     Mat sub1, sub2, sub3, sub4, smot1, smot2, smot3, smot4, gray1, gray2, gray3, gray4, white1, white2, white3, white4,gray_original_sub;
-    Mat canny1, canny2, canny3, canny4, left1, left2, left3, left4, right1, right2, right3, right4,hlsImg,hist;
     Mat grayl3,grayl4,grayr3,grayr4; //gray areas.
     
-    vector<Mat> channels(hlsImg.channels()); // vector Mat for histogram
     vector<Vec4i> lines;
     //string A[100] = {gray1,sub1,smot1};
     
@@ -37,8 +34,8 @@ void lane_detection(Mat frame)
     int inRangeMax1=0, inRangeMax2=0, inRangeMaxl3 = 0,inRangeMaxl4 = 0,inRangeMaxr3 = 0,inRangeMaxr4 = 0;
     int inRangeMin1=0, inRangeMin2=0, inRangeMinl3 = 0,inRangeMinl4 = 0,inRangeMinr3 = 0,inRangeMinr4 = 0;
     
-    float meanL3f,meanR3f, meanL4f, meanR4f;
-    float stdDevL3f,stdDevR3f, stdDevL4f, stdDevR4f;
+    int wayToGo=0; //0 : straight. 1 : left. 2 : right.
+
     
        // int width = frame.cols, height = frame.rows / 2;
     
@@ -68,9 +65,9 @@ void lane_detection(Mat frame)
     Point rec1_Rpoint(interest_x+halfWidth, interest_y); /// Rpoint is the start point of the right ROI
     Rect rec1(rec1_point, Size(width, subROIHeight));
     
-    Point rec2_point(interest_x, interest_y + subROIHeight);
+    Point rec2_point(interest_x, interest_y);
     Point rec2_Rpoint(interest_x+halfWidth, interest_y + subROIHeight);
-    Rect rec2(rec2_point, Size(width, subROIHeight * 2)); // ROI 2
+    Rect rec2(rec2_point, Size(width, subROIHeight * 3)); // ROI 2
     
     Point rec3_point(interest_x, interest_y + subROIHeight * 3);
     Point rec3_Rpoint(interest_x+halfWidth, interest_y + subROIHeight * 3);
@@ -118,12 +115,12 @@ void lane_detection(Mat frame)
     grayr3 = frame_gray(right_rec3);
     grayr4 = frame_gray(right_rec4);
     
-    getMinMax(gray1, &inRangeMin1, &inRangeMax1);
-    getMinMax(gray2, &inRangeMin2, &inRangeMax2);
-    getMinMax(grayl3, &inRangeMinl3, &inRangeMaxl3);
-    getMinMax(grayl4, &inRangeMinl4, &inRangeMaxl4);
-    getMinMax(grayr3, &inRangeMinr3, &inRangeMaxr3);
-    getMinMax(grayr4, &inRangeMinr4, &inRangeMaxr4);
+    getMinMax(gray1, &inRangeMin1, &inRangeMax1,1);
+    getMinMax(gray2, &inRangeMin2, &inRangeMax2,2);
+    getMinMax(grayl3, &inRangeMinl3, &inRangeMaxl3,3);
+    getMinMax(grayl4, &inRangeMinl4, &inRangeMaxl4,4);
+    getMinMax(grayr3, &inRangeMinr3, &inRangeMaxr3,3);
+    getMinMax(grayr4, &inRangeMinr4, &inRangeMaxr4,4);
     
     //appy min and max.
     inRange(gray1, inRangeMin1, inRangeMax1, gray1);
@@ -141,6 +138,8 @@ void lane_detection(Mat frame)
     white4 = frame_gray(rec4);
     
     //dialte and erode white part to enlarge the part.
+    dilate(white2,white2,Mat(),Point(-1,-1),3);
+    erode(white2, white2, Mat());
     dilate(white4,white4,Mat(),Point(-1,-1),3);
     erode(white4, white4, Mat());
     dilate(white3,white3,Mat(),Point(-1,-1),3);
@@ -154,25 +153,44 @@ void lane_detection(Mat frame)
     
    
     /*************edge  detection  4 **************/
-    Mat X4 = ROI(gray4,frame,rec4_point,4);
+    Mat X4 = ROI(gray4,frame,rec4_point,4,wayToGo);
+    
+    //staright way.
+    if( abs((X4.at<float>(0, 0)-frame.cols/2))<=30)
+    {
+        wayToGo=0;
+    }
+    
+    //left way
+    else if(((X4.at<float>(0, 0)-frame.cols/2)<(-30)))
+    {
+        wayToGo=1;
+        //        putText(frame, "Turn left" ,Point(100,400) , FONT_HERSHEY_PLAIN, 2, Scalar(LaneColor4), 2, LINE_8);
+    }
+    
+    //right way
+    else if(((X4.at<float>(0, 0)-frame.cols/2)>(30)))
+    {
+        wayToGo=2;
+    }
+    
+    if(wayToGo==0)
+        putText(frame, "Staright" ,Point(100,400) , FONT_HERSHEY_PLAIN, 2, Scalar(LaneColor4), 2, LINE_8);
+    else if(wayToGo==1)
+        putText(frame, "Turn Left" ,Point(100,400) , FONT_HERSHEY_PLAIN, 2, Scalar(LaneColor4), 2, LINE_8);
+    else if(wayToGo==2)
+        putText(frame, "Turn Right" ,Point(100,400) , FONT_HERSHEY_PLAIN, 2, Scalar(LaneColor4), 2, LINE_8);
+
+
     /*************edge  detection  3 **************/
-    Mat X3 = ROI(gray3,frame,rec3_point,3);
+    Mat X3 = ROI(gray3,frame,rec3_point,3,wayToGo);
     /*************edge  detection  2 **************/
-    Mat X2 = ROI(gray2,frame,rec2_point,2);
+    Mat X2 = ROI(gray2,frame,rec2_point,2,wayToGo);
     /*************edge  detection  1 **************/
     //Mat X1 = ROI(white1,frame,rec1_point);
    
     
-//    if(((X4.at<float>(0, 0)>frame.cols/2)||(X3.at<float>(0, 0)>frame.cols/2)))
-//    {
-//        putText(frame, "Turn right" ,Point(100,400) , FONT_HERSHEY_PLAIN, 2, Scalar(LaneColor4), 2, LINE_8);
-//    }
-//    else if(((X4.at<float>(0, 0)<frame.cols/2)&&(X3.at<float>(0, 0)<frame.cols/2)))
-//    {
-//        putText(frame, "Turn left" ,Point(100,400) , FONT_HERSHEY_PLAIN, 2, Scalar(LaneColor4), 2, LINE_8);
-//    }
-    
-    //inner angle.
+        //inner angle.
     
     imshow("frame_gray",frame_gray);
     imshow("gray2",gray2);
@@ -181,10 +199,10 @@ void lane_detection(Mat frame)
     
 }
 
-Mat ROI(Mat white3,Mat frame, Point rec3_point,int color)
+Mat ROI(Mat white3,Mat frame, Point rec3_point,int color,int wayToGo)
 {
     
-    Mat canny3;
+    Mat canny;
     
     float x1 = 0, x2 = 0, y1 = 0, y2 = 0; //declaration of x,y variables used in lines.
     float x3 = 0, x4 = 0, y3 = 0, y4 = 0;
@@ -199,26 +217,29 @@ Mat ROI(Mat white3,Mat frame, Point rec3_point,int color)
     
     int x = 0, y = 0;
     
-    Canny(white3, canny3, 150, 300, 3);
-    imshow("canny3", canny3);
+    Canny(white3, canny, 150, 300, 3);
+   // imshow("canny", canny);
 
-    vector<Vec4i> lines_R3;
-    vector<Point> pointList_R3;
+    vector<Vec4i> lines;
+    vector<Point> pointList;
     
     //vanishing point VP
     Point vp_R3;
     
     //20, 10, 140
-    HoughLinesP(canny3, lines_R3, 1, CV_PI / 180, 20, 10, 140);
+    HoughLinesP(canny, lines, 1, CV_PI / 180, 20, 10, 140);
     //Merge part
     
-    for (size_t i = 0; i < lines_R3.size(); i++) {
-        Vec4i l = lines_R3[i];
+    for (size_t i = 0; i < lines.size(); i++) {
+        Vec4i l = lines[i];
         
         //get slope.
         float slope = ((float)l[3] - (float)l[1]) / ((float)l[2] - (float)l[0]);
         
+       
         //lines of right side
+        if(wayToGo==0)
+        {
         if (slope >= 0.3 && slope <= 3) {
             countright++;
             x1 += l[0];
@@ -234,6 +255,55 @@ Mat ROI(Mat white3,Mat frame, Point rec3_point,int color)
             x4 += l[2];
             y4 += l[3] + rec3_point.y;
         }
+        }
+        
+        //left turn situation
+         else if(wayToGo==1)
+         {
+              //lines of right side
+             if (slope >= 0.3 && slope <= 3) {
+                 countright++;
+                 x1 += l[0];
+                 y1 += l[1] + rec3_point.y;
+                 x2 += l[2];
+                 y2 += l[3] + rec3_point.y;
+             }
+             //lines of left side
+             if (slope <= -0.3 && slope >= -3) {
+                 countleft++;
+                 x3 += l[0];
+                 y3 += l[1] + rec3_point.y;
+                 x4 += l[2];
+                 y4 += l[3] + rec3_point.y;
+             }
+
+         }
+        
+        //right turn situation.
+         else if(wayToGo==2)
+         {
+              //lines of right side
+             if (slope >= 3 && slope <= 10) {
+                 countright++;
+                 x1 += l[0];
+                 y1 += l[1] + rec3_point.y;
+                 x2 += l[2];
+                 y2 += l[3] + rec3_point.y;
+             }
+             //lines of left side
+             if (slope <= -0.3 && slope >= -10) {
+                 countleft++;
+                 x3 += l[0];
+                 y3 += l[1] + rec3_point.y;
+                 x4 += l[2];
+                 y4 += l[3] + rec3_point.y;
+             }
+             
+         }
+
+        
+        
+             
     }
     //if it is the first time, put initial values.
     if (countright == 0) {
@@ -309,13 +379,13 @@ Mat ROI(Mat white3,Mat frame, Point rec3_point,int color)
   //  innerAngleL = abs((X3.at<float>(0, 0)-x1)/(X3.at<float>(1, 0)-y1));
         
         // innerAngleR = abs((X3.at<float>(0, 0)-x3)/(X3.at<float>(1, 0)-y3));
-        innerAngleR = abs(tan((X3.at<float>(0, 0)-x1)/(X3.at<float>(1, 0)-y1)));
-        innerAngleL = abs(tan((X3.at<float>(0, 0)-x3)/(X3.at<float>(1, 0)-y3))) ;
+        innerAngleR = abs(tan(((X3.at<float>(0, 0))-x1)/((X3.at<float>(1, 0))-y1)));
+        innerAngleL = abs(tan(((X3.at<float>(0, 0))-x3)/((X3.at<float>(1, 0))-y3))) ;
        innerA = innerAngleR +  innerAngleL;
        innerAngleR = innerAngleR*180.0/M_PI;
         innerAngleL = innerAngleL*180.0/M_PI;
 
-    cout << "ROI3 R : " << innerAngleR<< "ROI3 L" << innerAngleL << endl;
+    cout << "ROI4 R : " << innerAngleR<< "ROI4 L : " << innerAngleL << endl;
     }
     
     return X3;
@@ -324,7 +394,7 @@ Mat ROI(Mat white3,Mat frame, Point rec3_point,int color)
 
 }
 
-void getMinMax(Mat roi, int* min, int* max)
+void getMinMax(Mat roi, int* min, int* max,int color)
 {
     // showing the brightest point
     float meanVal = 0, stdDevVal = 0;
@@ -342,7 +412,11 @@ void getMinMax(Mat roi, int* min, int* max)
     stdDevVal = stdDev.val[0];
     
     // calculate min value of inRange
+    if(color==2||color==1)
+    *min = meanVal + 1 * stdDevVal;
+    else
     *min = meanVal + 2 * stdDevVal;
+    
     
     // max value = mean + stdDev
     *max = meanVal + 5   * stdDevVal; // maxPixelVal;
