@@ -17,7 +17,7 @@ using namespace cv;
 float slopeR_Pre = 0;
 float slope_Pre = 0;
 
-Mat ROI(Mat white3,Mat frame, Point rec3_point,int color,int wayToGo);
+Mat ROI(Mat white,Mat frame, Point rec_point,int color,int wayToGo);
 void getMinMax(Mat roi, int* min, int* max, int color);
 
 
@@ -26,6 +26,7 @@ void lane_detection(Mat frame)
     Mat gray, smot, sub, hsv, white, yellow, both, canny, left, right,frame_gray;
     Mat sub1, sub2, sub3, sub4, smot1, smot2, smot3, smot4, gray1, gray2, gray3, gray4, white1, white2, white3, white4,gray_original_sub;
     Mat grayl3,grayl4,grayr3,grayr4; //gray areas.
+    Mat canny4,canny3,canny2;
     
     vector<Vec4i> lines;
     //string A[100] = {gray1,sub1,smot1};
@@ -137,6 +138,15 @@ void lane_detection(Mat frame)
     white3 = frame_gray(rec3);
     white4 = frame_gray(rec4);
     
+    Canny(white4, canny4, 150, 300, 3);
+     Canny(white3, canny3, 150, 300, 3);
+     Canny(white2, canny2, 150, 300, 3);
+    
+    imshow("canny4",canny4);
+    imshow("canny3",canny3);
+    imshow("canny2",canny2);
+    
+    
     //dialte and erode white part to enlarge the part.
     dilate(white2,white2,Mat(),Point(-1,-1),3);
     erode(white2, white2, Mat());
@@ -156,13 +166,13 @@ void lane_detection(Mat frame)
     Mat X4 = ROI(gray4,frame,rec4_point,4,wayToGo);
     
     //staright way.
-    if( abs((X4.at<float>(0, 0)-frame.cols/2))<=30)
+    if( abs((X4.at<float>(0, 0)-frame.cols/2))<=20)
     {
         wayToGo=0;
     }
     
     //left way
-    else if(((X4.at<float>(0, 0)-frame.cols/2)<(-30)))
+    else if(((X4.at<float>(0, 0)-frame.cols/2)<(-20)))
     {
         wayToGo=1;
         //        putText(frame, "Turn left" ,Point(100,400) , FONT_HERSHEY_PLAIN, 2, Scalar(LaneColor4), 2, LINE_8);
@@ -199,7 +209,7 @@ void lane_detection(Mat frame)
     
 }
 
-Mat ROI(Mat white3,Mat frame, Point rec3_point,int color,int wayToGo)
+Mat ROI(Mat white,Mat frame, Point rec_point,int color,int wayToGo)
 {
     
     Mat canny;
@@ -217,14 +227,12 @@ Mat ROI(Mat white3,Mat frame, Point rec3_point,int color,int wayToGo)
     
     int x = 0, y = 0;
     
-    Canny(white3, canny, 150, 300, 3);
+    Canny(white, canny, 150, 300, 3);
    // imshow("canny", canny);
 
     vector<Vec4i> lines;
     vector<Point> pointList;
     
-    //vanishing point VP
-    Point vp_R3;
     
     //20, 10, 140
     HoughLinesP(canny, lines, 1, CV_PI / 180, 20, 10, 140);
@@ -234,72 +242,116 @@ Mat ROI(Mat white3,Mat frame, Point rec3_point,int color,int wayToGo)
         Vec4i l = lines[i];
         
         //get slope.
-        float slope = ((float)l[3] - (float)l[1]) / ((float)l[2] - (float)l[0]);
-        
+        float slope = (((float)l[3] - (float)l[1]) / ((float)l[2] - (float)l[0]));
+      
+       // float slope =  cvFastArctan(((float)l[3] - (float)l[1]), ((float)l[2] - (float)l[0]));
        
-        //lines of right side
-        if(wayToGo==0)
-        {
+        
         if (slope >= 0.3 && slope <= 3) {
             countright++;
             x1 += l[0];
-            y1 += l[1] + rec3_point.y;
+            y1 += l[1] + rec_point.y;
             x2 += l[2];
-            y2 += l[3] + rec3_point.y;
+            y2 += l[3] + rec_point.y;
+//            cout << "R" << slope << endl;
         }
-        //lines of left side
+        //lines of right side
         if (slope <= -0.3 && slope >= -3) {
             countleft++;
             x3 += l[0];
-            y3 += l[1] + rec3_point.y;
+            y3 += l[1] + rec_point.y;
             x4 += l[2];
-            y4 += l[3] + rec3_point.y;
+            y4 += l[3] + rec_point.y;
+//            cout << "L" << slope << endl;
         }
-        }
-        
-        //left turn situation
-         else if(wayToGo==1)
-         {
-              //lines of right side
-             if (slope >= 0.3 && slope <= 3) {
-                 countright++;
-                 x1 += l[0];
-                 y1 += l[1] + rec3_point.y;
-                 x2 += l[2];
-                 y2 += l[3] + rec3_point.y;
-             }
-             //lines of left side
-             if (slope <= -0.3 && slope >= -3) {
-                 countleft++;
-                 x3 += l[0];
-                 y3 += l[1] + rec3_point.y;
-                 x4 += l[2];
-                 y4 += l[3] + rec3_point.y;
-             }
 
-         }
+//                if (slope >= 0.3 && slope <= 3) {
+//                    countright++;
+//                    x1 = l[0];
+//                    y1 = l[1] + rec_point.y;
+//                    x2 = l[2];
+//                    y2 = l[3] + rec_point.y;
+//        //            cout << "R" << slope << endl;
+//                }
+//                //lines of right side
+//                if (slope <= -0.3 && slope >= -3) {
+//                    countleft++;
+//                    x3 = l[0];
+//                    y3 = l[1] + rec_point.y;
+//                    x4 = l[2];
+//                    y4 = l[3] + rec_point.y;
+//        //            cout << "L" << slope << endl;
+//                }
+
         
-        //right turn situation.
-         else if(wayToGo==2)
-         {
-              //lines of right side
-             if (slope >= 3 && slope <= 10) {
-                 countright++;
-                 x1 += l[0];
-                 y1 += l[1] + rec3_point.y;
-                 x2 += l[2];
-                 y2 += l[3] + rec3_point.y;
-             }
-             //lines of left side
-             if (slope <= -0.3 && slope >= -10) {
-                 countleft++;
-                 x3 += l[0];
-                 y3 += l[1] + rec3_point.y;
-                 x4 += l[2];
-                 y4 += l[3] + rec3_point.y;
-             }
-             
-         }
+        //straight way
+//        if(wayToGo==0)
+//        {
+//            //lines of right side
+//            if (slope >= 10 && slope <= 25) {
+//                countright++;
+//                x1 += l[0];
+//                y1 += l[1] + rec_point.y;
+//                x2 += l[2];
+//                y2 += l[3] + rec_point.y;
+//               cout << "R" << slope << endl;
+//            }
+//            //lines of left side
+//           if (slope <= 330  && slope >= 290){
+//            
+//                countleft++;
+//                x3 += l[0];
+//                y3 += l[1] + rec_point.y;
+//                x4 += l[2];
+//                y4 += l[3] + rec_point.y;
+//               cout << "L" << slope << endl;
+//            
+//           }
+//        }
+//        
+//        //left turn situation
+//         else if(wayToGo==1)
+//         {
+//              //lines of right side
+//             if (slope >= 0 && slope <= 25) {
+//                 countright++;
+//                 x1 += l[0];
+//                 y1 += l[1] + rec_point.y;
+//                 x2 += l[2];
+//                 y2 += l[3] + rec_point.y;
+//             }
+//             //lines of left side
+//             if (slope <= 350 && slope >= 270) {
+//                 countleft++;
+//                 x3 += l[0];
+//                 y3 += l[1] + rec_point.y;
+//                 x4 += l[2];
+//                 y4 += l[3] + rec_point.y;
+//             }
+//
+//         }
+//        
+//        //right turn situation.
+//         else if(wayToGo==2)
+//         {
+//              //lines of right side
+//             if (slope >40 && slope <= 180) {
+//                 countright++;
+//                 x1 += l[0];
+//                 y1 += l[1] + rec_point.y;
+//                 x2 += l[2];
+//                 y2 += l[3] + rec_point.y;
+//             }
+//             //lines of left side
+//             if (slope <= 350  && slope >= 300) {
+//                 countleft++;
+//                 x3 += l[0];
+//                 y3 += l[1] + rec_point.y;
+//                 x4 += l[2];
+//                 y4 += l[3] + rec_point.y;
+//             }
+//             
+//         }
 
         
         
@@ -340,21 +392,23 @@ Mat ROI(Mat white3,Mat frame, Point rec3_point,int color,int wayToGo)
     
     
     float dataA[] = { (b2 - b1) / (a2 - a1), -1, (b4 - b3) / (a4 - a3), -1 };
-    Mat A3(2, 2, CV_32F, dataA);
-    Mat invA3;
-    invert(A3, invA3);
+    Mat A(2, 2, CV_32F, dataA);
+    Mat invA;
+    invert(A, invA);
     
     float dataB[] = { a1*(b2 - b1) / (a2 - a1) - b1, a3*(b4 - b3) / (a4 - a3) - b3 };
-    Mat B3(2, 1, CV_32F, dataB);
+    Mat B(2, 1, CV_32F, dataB);
     
     //vanishing point.
-    Mat X3 = invA3*B3;
+    Mat X = invA*B;
     
     if(color==2)
     {
         line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor2, 3);
         line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor2, 3);
-        circle(frame, Point(X3.at<float>(0, 0), X3.at<float>(1, 0)), 5, LaneColor2, 3, LINE_AA);
+        circle(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), 5, LaneColor2, 3, LINE_AA);
+//        cout << "slope 2R" <<  cvFastArctan(a2,a1)<< endl;
+//        cout << "slope 2L" <<  cvFastArctan(a3,a4)<< endl;
     }
 
 
@@ -362,13 +416,21 @@ Mat ROI(Mat white3,Mat frame, Point rec3_point,int color,int wayToGo)
     {
     line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3);
     line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3);
-    circle(frame, Point(X3.at<float>(0, 0), X3.at<float>(1, 0)), 5, LaneColor3, 3, LINE_AA);
+    circle(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), 5, LaneColor3, 3, LINE_AA);
+//        cout << "slope 3R" <<  cvFastArctan(a2,a1)<< endl;
+//        cout << "slope 3L" <<  cvFastArctan(a3,a4)<< endl;
     }
     if(color==4)
     {
     line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor4, 3);
     line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor4, 3);
-    circle(frame, Point(X3.at<float>(0, 0), X3.at<float>(1, 0)), 5, LaneColor4, 3, LINE_AA);
+    circle(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), 5, LaneColor4, 3, LINE_AA);
+//        cout << "slope 4R" <<  cvFastArctan(a2,a1)<< endl;
+//        cout << "slope 4L" <<  cvFastArctan(a3,a4)<< endl;
+        cout << "a1 " << a1 << endl;
+        cout << "a2"<<a2 << endl;
+        
+
     }
     
     if(color==4)
@@ -376,19 +438,19 @@ Mat ROI(Mat white3,Mat frame, Point rec3_point,int color,int wayToGo)
     float innerAngleL=0;
     float innerAngleR=0;
     float innerA=0;
-  //  innerAngleL = abs((X3.at<float>(0, 0)-x1)/(X3.at<float>(1, 0)-y1));
+  //  innerAngleL = abs((X.at<float>(0, 0)-x1)/(X.at<float>(1, 0)-y1));
         
-        // innerAngleR = abs((X3.at<float>(0, 0)-x3)/(X3.at<float>(1, 0)-y3));
-        innerAngleR = abs(tan(((X3.at<float>(0, 0))-x1)/((X3.at<float>(1, 0))-y1)));
-        innerAngleL = abs(tan(((X3.at<float>(0, 0))-x3)/((X3.at<float>(1, 0))-y3))) ;
+        // innerAngleR = abs((X.at<float>(0, 0)-X)/(X.at<float>(1, 0)-y3));
+        innerAngleR = abs(tan(((X.at<float>(0, 0))-a1)/((X.at<float>(1, 0)))));
+        innerAngleL = abs(tan(((X.at<float>(0, 0))-a3)/((X.at<float>(1, 0))))) ;
        innerA = innerAngleR +  innerAngleL;
-       innerAngleR = innerAngleR*180.0/M_PI;
-        innerAngleL = innerAngleL*180.0/M_PI;
+       innerAngleR = (innerAngleR*180.0/M_PI) ;
+        innerAngleL = (innerAngleL*180.0/M_PI);
 
-    cout << "ROI4 R : " << innerAngleR<< "ROI4 L : " << innerAngleL << endl;
+    cout << "ROI4 R : " << innerAngleR<< "  ROI4 L : " << innerAngleL << endl;
     }
     
-    return X3;
+    return X ;
     
     
 
