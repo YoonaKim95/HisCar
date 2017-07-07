@@ -238,7 +238,11 @@ Mat ROI(Mat white,Mat frame, Point rec_point,int color,int wayToGo)
     HoughLinesP(canny, lines, 1, CV_PI / 180, 20, 10, 140);
     //Merge part
     
+    float selected_slopeR =0;
+    float selected_slopeL =0;
+    
     for (size_t i = 0; i < lines.size(); i++) {
+        
         Vec4i l = lines[i];
         
         //get slope.
@@ -247,24 +251,6 @@ Mat ROI(Mat white,Mat frame, Point rec_point,int color,int wayToGo)
        // float slope =  cvFastArctan(((float)l[3] - (float)l[1]), ((float)l[2] - (float)l[0]));
        
         
-        if (slope >= 0.3 && slope <= 3) {
-            countright++;
-            x1 += l[0];
-            y1 += l[1] + rec_point.y;
-            x2 += l[2];
-            y2 += l[3] + rec_point.y;
-//            cout << "R" << slope << endl;
-        }
-        //lines of right side
-        if (slope <= -0.3 && slope >= -3) {
-            countleft++;
-            x3 += l[0];
-            y3 += l[1] + rec_point.y;
-            x4 += l[2];
-            y4 += l[3] + rec_point.y;
-//            cout << "L" << slope << endl;
-        }
-
 //                if (slope >= 0.3 && slope <= 3) {
 //                    countright++;
 //                    x1 = l[0];
@@ -285,73 +271,83 @@ Mat ROI(Mat white,Mat frame, Point rec_point,int color,int wayToGo)
 
         
         //straight way
-//        if(wayToGo==0)
-//        {
-//            //lines of right side
-//            if (slope >= 10 && slope <= 25) {
-//                countright++;
-//                x1 += l[0];
-//                y1 += l[1] + rec_point.y;
-//                x2 += l[2];
-//                y2 += l[3] + rec_point.y;
-//               cout << "R" << slope << endl;
-//            }
-//            //lines of left side
-//           if (slope <= 330  && slope >= 290){
-//            
-//                countleft++;
-//                x3 += l[0];
-//                y3 += l[1] + rec_point.y;
-//                x4 += l[2];
-//                y4 += l[3] + rec_point.y;
-//               cout << "L" << slope << endl;
-//            
-//           }
-//        }
-//        
-//        //left turn situation
-//         else if(wayToGo==1)
-//         {
-//              //lines of right side
-//             if (slope >= 0 && slope <= 25) {
-//                 countright++;
-//                 x1 += l[0];
-//                 y1 += l[1] + rec_point.y;
-//                 x2 += l[2];
-//                 y2 += l[3] + rec_point.y;
-//             }
-//             //lines of left side
-//             if (slope <= 350 && slope >= 270) {
-//                 countleft++;
-//                 x3 += l[0];
-//                 y3 += l[1] + rec_point.y;
-//                 x4 += l[2];
-//                 y4 += l[3] + rec_point.y;
-//             }
-//
-//         }
-//        
-//        //right turn situation.
-//         else if(wayToGo==2)
-//         {
-//              //lines of right side
-//             if (slope >40 && slope <= 180) {
-//                 countright++;
-//                 x1 += l[0];
-//                 y1 += l[1] + rec_point.y;
-//                 x2 += l[2];
-//                 y2 += l[3] + rec_point.y;
-//             }
-//             //lines of left side
-//             if (slope <= 350  && slope >= 300) {
-//                 countleft++;
-//                 x3 += l[0];
-//                 y3 += l[1] + rec_point.y;
-//                 x4 += l[2];
-//                 y4 += l[3] + rec_point.y;
-//             }
-//             
-//         }
+        if(wayToGo==0)
+        {
+            //lines of right side
+            if (slope >= 0.3 && slope <= 4) {
+                countright++;
+                x1 += l[0];
+                y1 += l[1] + rec_point.y;
+                x2 += l[2];
+                y2 += l[3] + rec_point.y;
+               cout << "R" << slope << endl;
+                selected_slopeR=slope;
+            }
+            //lines of left side
+           if (slope <= -0.3  && slope >= -3){
+            
+                countleft++;
+                x3 += l[0];
+                y3 += l[1] + rec_point.y;
+                x4 += l[2];
+                y4 += l[3] + rec_point.y;
+               cout << "L" << slope << endl;
+               selected_slopeL=slope;
+
+           }
+        }
+        
+        //left turn situation
+         else if(wayToGo==1)
+         {
+              //lines of right side
+             if (slope >= 0.3 && slope <= 3 ) {
+                 countright++;
+                 x1 += l[0];
+                 y1 += l[1] + rec_point.y;
+                 x2 += l[2];
+                 y2 += l[3] + rec_point.y;
+                 selected_slopeR=slope;
+
+             }
+             //lines of left side
+             if (slope <= -0.5 && slope >= -5) {
+                 countleft++;
+                 x3 += l[0];
+                 y3 += l[1] + rec_point.y;
+                 x4 += l[2];
+                 y4 += l[3] + rec_point.y;
+                 selected_slopeL=slope;
+
+             }
+
+         }
+        
+        //right turn situation.
+         else if(wayToGo==2)
+         {
+              //lines of right side
+             if (slope >1 && slope <= 10) {
+                 countright++;
+                 x1 += l[0];
+                 y1 += l[1] + rec_point.y;
+                 x2 += l[2];
+                 y2 += l[3] + rec_point.y;
+                 selected_slopeR=slope;
+
+             }
+             //lines of left side
+             if (slope <= -2  && slope >= -1) {
+                 countleft++;
+                 x3 += l[0];
+                 y3 += l[1] + rec_point.y;
+                 x4 += l[2];
+                 y4 += l[3] + rec_point.y;
+                 selected_slopeL=slope;
+
+             }
+             
+         }
 
         
         
@@ -407,8 +403,8 @@ Mat ROI(Mat white,Mat frame, Point rec_point,int color,int wayToGo)
         line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor2, 3);
         line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor2, 3);
         circle(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), 5, LaneColor2, 3, LINE_AA);
-//        cout << "slope 2R" <<  cvFastArctan(a2,a1)<< endl;
-//        cout << "slope 2L" <<  cvFastArctan(a3,a4)<< endl;
+        cout << "slope 2R" <<  selected_slopeR << endl;
+        cout << "slope 2L" <<  selected_slopeL << endl;
     }
 
 
@@ -417,19 +413,16 @@ Mat ROI(Mat white,Mat frame, Point rec_point,int color,int wayToGo)
     line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3);
     line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3);
     circle(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), 5, LaneColor3, 3, LINE_AA);
-//        cout << "slope 3R" <<  cvFastArctan(a2,a1)<< endl;
-//        cout << "slope 3L" <<  cvFastArctan(a3,a4)<< endl;
+        cout << "slope 3R" <<  selected_slopeR << endl;
+        cout << "slope 3L" <<  selected_slopeL << endl;
     }
     if(color==4)
     {
     line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor4, 3);
     line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor4, 3);
     circle(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), 5, LaneColor4, 3, LINE_AA);
-//        cout << "slope 4R" <<  cvFastArctan(a2,a1)<< endl;
-//        cout << "slope 4L" <<  cvFastArctan(a3,a4)<< endl;
-        cout << "a1 " << a1 << endl;
-        cout << "a2"<<a2 << endl;
-        
+        cout << "slope 4R" <<   selected_slopeR << endl;
+        cout << "slope 4L" <<  selected_slopeL << endl;
 
     }
     
@@ -441,7 +434,7 @@ Mat ROI(Mat white,Mat frame, Point rec_point,int color,int wayToGo)
   //  innerAngleL = abs((X.at<float>(0, 0)-x1)/(X.at<float>(1, 0)-y1));
         
         // innerAngleR = abs((X.at<float>(0, 0)-X)/(X.at<float>(1, 0)-y3));
-        innerAngleR = abs(tan(((X.at<float>(0, 0))-a1)/((X.at<float>(1, 0)))));
+        innerAngleR = abs(tan(((X.at<float>(0, 0))-a1)/((X.at<float>(1, 0))))) ;
         innerAngleL = abs(tan(((X.at<float>(0, 0))-a3)/((X.at<float>(1, 0))))) ;
        innerA = innerAngleR +  innerAngleL;
        innerAngleR = (innerAngleR*180.0/M_PI) ;
