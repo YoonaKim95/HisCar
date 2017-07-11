@@ -20,6 +20,7 @@ float slope_Pre = 0;
 Mat ROI(Mat white,Mat frame, Point rec_point,int color,int PrewayToGo);
 void getMinMax(Mat roi, int* min, int* max, int color);
 static int WayToGo=0;
+vector<vector<Point> > findandDrawContour(Mat roi, char* windowName);
 
 void lane_detection(Mat frame)
 {
@@ -39,7 +40,11 @@ void lane_detection(Mat frame)
 
     
        // int width = frame.cols, height = frame.rows / 2;
-    
+
+    char contourL3[10] = "ContourL3";
+    char contourR3[10] = "ContourR3";
+    char contourL4[10] = "ContourL4";
+    char contourR4[10] = "ContourR4";
     
     
     // resolution: 640 * 480
@@ -131,7 +136,14 @@ void lane_detection(Mat frame)
     inRange(grayr3, inRangeMinr3, inRangeMaxr3, grayr3);
     inRange(grayr4, inRangeMinr4, inRangeMaxr4, grayr4);
     
-    
+    vector<vector<Point> > pointSetl3;
+    vector<vector<Point> > pointSetl4;
+    vector<vector<Point> > pointSetr3;
+    vector<vector<Point> > pointSetr4;
+    pointSetl3 = findandDrawContour(grayl3, contourL3);
+    pointSetl4 = findandDrawContour(grayl4, contourL4);
+    pointSetr3 = findandDrawContour(grayr3, contourR3);
+    pointSetr4 = findandDrawContour(grayr4, contourR4);
     
     white1 = frame_gray(rec1);
     white2 = frame_gray(rec2);
@@ -282,7 +294,7 @@ Mat ROI(Mat white,Mat frame, Point rec_point,int color,int WayToGo)
                 y1 += l[1] + rec_point.y;
                 x2 += l[2];
                 y2 += l[3] + rec_point.y;
-               cout << "R" << slope << endl;
+               // cout << "R" << slope << endl;
                 selected_slopeR=slope;
             }
             //lines of left side
@@ -293,7 +305,7 @@ Mat ROI(Mat white,Mat frame, Point rec_point,int color,int WayToGo)
                 y3 += l[1] + rec_point.y;
                 x4 += l[2];
                 y4 += l[3] + rec_point.y;
-               cout << "L" << slope << endl;
+               // cout << "L" << slope << endl;
                selected_slopeL=slope;
 
            }
@@ -434,8 +446,8 @@ Mat ROI(Mat white,Mat frame, Point rec_point,int color,int WayToGo)
         line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor2, 3);
         line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor2, 3);
         circle(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), 5, LaneColor2, 3, LINE_AA);
-        cout << "slope 2R" <<  selected_slopeR << endl;
-        cout << "slope 2L" <<  selected_slopeL << endl;
+        // cout << "slope 2R" <<  selected_slopeR << endl;
+        // cout << "slope 2L" <<  selected_slopeL << endl;
     }
 
 
@@ -444,16 +456,16 @@ Mat ROI(Mat white,Mat frame, Point rec_point,int color,int WayToGo)
     line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor3, 3);
     line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor3, 3);
     circle(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), 5, LaneColor3, 3, LINE_AA);
-        cout << "slope 3R" <<  selected_slopeR << endl;
-        cout << "slope 3L" <<  selected_slopeL << endl;
+        // cout << "slope 3R" <<  selected_slopeR << endl;
+        // cout << "slope 3L" <<  selected_slopeL << endl;
     }
     if(color==4)
     {
     line(frame, Point(a1, 0), Point(a2, frame.rows), LaneColor4, 3);
     line(frame, Point(a3, 0), Point(a4, frame.rows), LaneColor4, 3);
     circle(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), 5, LaneColor4, 3, LINE_AA);
-        cout << "slope 4R" <<   selected_slopeR << endl;
-        cout << "slope 4L" <<  selected_slopeL << endl;
+        // cout << "slope 4R" <<   selected_slopeR << endl;
+        // cout << "slope 4L" <<  selected_slopeL << endl;
 
     }
     
@@ -471,7 +483,7 @@ Mat ROI(Mat white,Mat frame, Point rec_point,int color,int WayToGo)
        innerAngleR = (innerAngleR*180.0/M_PI) ;
         innerAngleL = (innerAngleL*180.0/M_PI);
 
-    cout << "ROI4 R : " << innerAngleR<< "  ROI4 L : " << innerAngleL << endl;
+    // cout << "ROI4 R : " << innerAngleR<< "  ROI4 L : " << innerAngleL << endl;
     }
     
     return X ;
@@ -508,11 +520,76 @@ void getMinMax(Mat roi, int* min, int* max,int color)
     *max = meanVal + 5   * stdDevVal; // maxPixelVal;
 }
 
+vector<vector<Point> > findandDrawContour(Mat roi, char* windowName)
+{
+  vector<vector<Point> > contours;
+  int mode = RETR_EXTERNAL;
+  //  int mode = RETR_FLOODFILL;
+  //  int mode = RETR_LIST;
+  //  int mode = RETR_CCOMP;
+  //  int mode = RETR_TREE;
+
+  dilate(roi,roi,Mat(),Point(-1,-1),3);
+  erode(roi, roi, Mat());
+
+    int method = CHAIN_APPROX_NONE;
+//  int method = CHAIN_APPROX_SIMPLE;
+  //  int method = CHAIN_APPROX_TC89_L1;
+
+  vector<Vec4i> hierarchy;
+  findContours(roi, contours, hierarchy, mode, method);
+  cout << "contours.size()=" << contours.size() << endl;
+
+  cvtColor(roi, roi, COLOR_GRAY2BGR);
+
+  if (contours.size() <= 0 || contours.size() > 20 )
+    {
+
+    }
+  else
+    {
+  /*
+  //  drawContours(roi, contours, -1, Scalar(255,255,255), 2);
+  for(int k = 0; k < contours.size(); k++)
+    {
+      Scalar color(255,255,10);
+      drawContours(roi, contours, k, color, 2);
+
+      cout << " contours[" << k << "].size = " << contours[k].size() << endl;
+      for(int j = 0; j < contours[k].size(); j++)
+	{
+	  Point pt = contours[k][j];
+	  cout << " pt[" << j << "]=" << pt << endl;
+	}
+    }
+   */
+
+  Scalar color(255,255,10);
+  vector<Rect> rect(contours.size());
+  vector<Mat> matArr(contours.size());
+
+  for(int i = 0; i < contours.size(); i++)
+    rect[i] = boundingRect(Mat(contours[i]));
+  for(int i = 0; i < contours.size(); i++)
+    rectangle(roi, rect[i], color, 2, 8, 0);
+
+  for(int i = 0; i < contours.size(); i++)
+    {
+      matArr[i] = Mat(roi, rect[i]);
+
+    }
+  imshow("mat", matArr[1]);
+  imshow(windowName, roi);
+  }
+
+  return contours;
+}
+
 
 // Namsoo's storage Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/
 
 int main() {
-    char title[100] = "/Users/NAMSOO/Documents/Xcode/OpenCV/VanishingPoint/VanishingPoint/mono.mp4";
+    char title[100] = "mono.mp4";
     VideoCapture capture(title);
     Mat frame;
     Mat origin;
