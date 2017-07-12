@@ -579,6 +579,7 @@ vector<vector<Point> > findandDrawContour(Mat roi, char* windowName)
       if(temp.area() > 30)
       	{
       	  rect[k] = temp;
+
       	  k++;
       	}
     }
@@ -590,10 +591,10 @@ vector<vector<Point> > findandDrawContour(Mat roi, char* windowName)
   name[4] = '\0';
   for(int i = 0; i < k; i++)
     {
-      name[3] = i+1;
+      name[3] = i+'0';
       cout << name << endl;
       matArr[i] = Mat(roi, rect[i]);
-      //imshow(name, matArr[i]);
+      imshow(name, matArr[i]);
     }
 
   imshow(windowName, roi);
