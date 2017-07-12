@@ -522,6 +522,7 @@ void getMinMax(Mat roi, int* min, int* max,int color)
 
 vector<vector<Point> > findandDrawContour(Mat roi, char* windowName)
 {
+
   vector<vector<Point> > contours;
   int mode = RETR_EXTERNAL;
   //  int mode = RETR_FLOODFILL;
@@ -542,7 +543,7 @@ vector<vector<Point> > findandDrawContour(Mat roi, char* windowName)
 
   cvtColor(roi, roi, COLOR_GRAY2BGR);
 
-  if (contours.size() <= 0 || contours.size() > 20 )
+  if (contours.size() <= 1 || contours.size() > 20 )
     {
 
     }
@@ -568,17 +569,33 @@ vector<vector<Point> > findandDrawContour(Mat roi, char* windowName)
   vector<Rect> rect(contours.size());
   vector<Mat> matArr(contours.size());
 
-  for(int i = 0; i < contours.size(); i++)
-    rect[i] = boundingRect(Mat(contours[i]));
-  for(int i = 0; i < contours.size(); i++)
-    rectangle(roi, rect[i], color, 2, 8, 0);
+
+  int k = 0, j = 0;
+  int sizeOfRect = 30;
 
   for(int i = 0; i < contours.size(); i++)
     {
-      matArr[i] = Mat(roi, rect[i]);
-
+      Rect temp = boundingRect(Mat(contours[i]));
+      if(temp.area() > 30)
+      	{
+      	  rect[k] = temp;
+      	  k++;
+      	}
     }
-  imshow("mat", matArr[1]);
+
+  for(int i = 0; i < k; i++)
+    rectangle(roi, rect[i], color, 2, 8, 0);
+
+  char name[5] = "Mat";
+  name[4] = '\0';
+  for(int i = 0; i < k; i++)
+    {
+      name[3] = i+1;
+      cout << name << endl;
+      matArr[i] = Mat(roi, rect[i]);
+      //imshow(name, matArr[i]);
+    }
+
   imshow(windowName, roi);
   }
 
