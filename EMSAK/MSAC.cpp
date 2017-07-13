@@ -779,7 +779,7 @@ void MSAC::drawCS(cv::Mat &im, std::vector<std::vector<std::vector<cv::Point> > 
 			// Paint vp if inside the image
 			if(vp.x >=0 && vp.x < im.cols && vp.y >=0 && vp.y <im.rows)
 			{
-				circle(im, vp, 4, colors[vpNum], 2);	
+				circle(im, vp, 4, colors[vpNum], 2);
 				circle(im, vp, 3, CV_RGB(0,0,0), -1);				
 			}
 		}
