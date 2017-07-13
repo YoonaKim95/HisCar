@@ -18,7 +18,7 @@ float slopeR_Pre = 0;
 float slope_Pre = 0;
 
 // change function name
-Point& findLineAndVP(Mat& white, Mat& frame, Point& rec_point, int color, int PrewayToGo);
+Point findLineAndVP(Mat& white, Mat& frame, Point& rec_point, int color, int PrewayToGo);
 void getMinMax(Mat& roi, int* min, int* max, int color);
 void checkCurve(Mat& frame, Point& vp);
 
@@ -156,7 +156,7 @@ void lane_detection(Mat& frame)
    checkCurve(frame, vp4);
 }
 
-Point& findLineAndVP(Mat& white, Mat& frame, Point& rec_point, int color, int WayToGo)
+Point findLineAndVP(Mat& white, Mat& frame, Point& rec_point, int color, int WayToGo)
 {
 
    Mat canny;
@@ -400,7 +400,9 @@ Point& findLineAndVP(Mat& white, Mat& frame, Point& rec_point, int color, int Wa
       // cout << "ROI4 R : " << innerAngleR<< "  ROI4 L : " << innerAngleL << endl;
    }
 
-   return Point(X.at<float>(0, 0), X.at<float>(1, 0));
+   Point point(X.at<float>(0, 0), X.at<float>(1, 0));
+
+   return point;
 }
 
 void getMinMax(Mat& roi, int* min, int* max, int color)
