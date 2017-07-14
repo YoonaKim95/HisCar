@@ -145,6 +145,8 @@ void lane_detection(Mat& frame)
 	vector<vector<Point> > pointSetContour;
 	pointSetContour = findandDrawContour(contourCanny, contourWindow);
 
+	imshow("After Contour", contourCanny);
+
 	sub3 = matForContour(rec3);
 	sub4 = matForContour(rec4);
 
@@ -467,7 +469,7 @@ vector<vector<Point> > findandDrawContour(Mat &roi, char* windowName) {
 
 	int k = 0, j = 0;
 	int minSizeOfRect = 100;
-	int maxSizeOfRect = 20000;
+	int maxSizeOfRect = 1000;
 
 	int mode = RETR_EXTERNAL;
 	//  int mode = RETR_FLOODFILL;
@@ -490,38 +492,37 @@ vector<vector<Point> > findandDrawContour(Mat &roi, char* windowName) {
 		Scalar color(255, 255, 10);
 		vector<Rect> rect(contours.size());
 		vector<Mat> matArr(contours.size());
-		drawContours(roi, contours, -1, Scalar(255, 255, 255));
+		drawContours(roi, contours, -1, Scalar(255, 255, 255), -1);
 
 		for (int i = 0; i < contours.size(); i++) {
 			Rect temp = boundingRect(Mat(contours[i]));
-			if (temp.area() > minSizeOfRect && temp.area() < maxSizeOfRect)
-			{
+//			if ((temp.area() < minSizeOfRect && temp.area() > 1) || temp.area() > maxSizeOfRect)
+//			{
 				rect[k] = temp;
 				k++;
-			}
+//			}
 		}
 
-		//   for (int i = 0; i < k; i++)
-			// rectangle(roi, rect[i], color, 0.5, 8, 0);
+		for (int i = 0; i < k; i++)
+			 rectangle(roi, rect[i], color, 0.5, 8, 0);
 
 		char name[10];
 		for (int i = 0; i < k; i++)      {
 			cout << "===================================" << endl;
 			sprintf(name, "Mat%d", i);
 			matArr[i] = Mat(roi, rect[i]);
-			namedWindow(name, CV_WINDOW_NORMAL);
-			Mat Cur_Mat = matArr[i];
-			cvtColor(Cur_Mat, Cur_Mat, CV_BGR2GRAY);
-			imshow(name, Cur_Mat);
+			Mat calcMat;
+			cvtColor(matArr[i], calcMat, CV_BGR2GRAY);
+			//namedWindow(name, CV_WINDOW_NORMAL);
+			//imshow(name, Cur_Mat);
 
 			int row = matArr[i].rows;
 			vector<int> whiteCount(row);
 
 			for (int y = 0; y < row; y++) {
-
 				int count_white = 0;
 
-				Mat rowMat = Cur_Mat.row(y);
+				Mat rowMat = calcMat.row(y);
 				count_white = countNonZero(rowMat);
 
 				whiteCount[y] = count_white;
@@ -529,8 +530,7 @@ vector<vector<Point> > findandDrawContour(Mat &roi, char* windowName) {
 			}
 
 
-			float sum = 0.0, mean, standardDeviation = 0.0;
-
+			float sum = 0.0, mean = 0.0, standardDeviation = 0.0;
 			for (int z = 0; z < row; z++) {
 				sum += whiteCount[z];
 			}
@@ -542,8 +542,12 @@ vector<vector<Point> > findandDrawContour(Mat &roi, char* windowName) {
 
 			int stdevOfWhite = sqrt(standardDeviation / row);
 			cout << "STD_Y: " << i << ": "<< stdevOfWhite << endl;
+
+			// give condition after this
+
+			if (stdevOfWhite > 20)
+			  matArr[i].setTo(0);
 		}
-		imshow(windowName, roi);
 	}
 	return contours;
 }
@@ -583,6 +587,5 @@ int main() {
 		}
 		frameNum++;
 	}
-
 	return 0;
 }
