@@ -150,16 +150,34 @@ void lane_detection(Mat& frame)
 	sub3 = matForContour(rec3);
 	sub4 = matForContour(rec4);
 
+
+
+
+	Mat con3, con4; 
+
+	Point rec3_Con_point(interest_x,0);
+	Rect recCon3(rec3_Con_point, Size(width, subROIHeight * 3));
+
+	Point rec4_Con_point(interest_x, subROIHeight * 3);
+	Rect recCon4(rec4_Con_point, Size(width, subROIHeight * 10));
+
+
+
+	con3 = contourCanny(recCon3);
+	con4 = contourCanny(recCon4);
+
+	imshow("con3", con3);
+	imshow("con4", con4);
+
 	//default value of PrewayToGo is straight.
-	Point vp3 = findLineAndVP(sub3, frame, rec3_point, 3, WayToGo);
-	Point vp4 = findLineAndVP(sub4, frame, rec4_point, 4, WayToGo);
+	Point vp3 = findLineAndVP(con3, frame, rec3_point, 3, WayToGo);
+	Point vp4 = findLineAndVP(con4, frame, rec4_point, 4, WayToGo);
 
 	checkCurve(frame, vp3);
 	checkCurve(frame, vp4);
 }
 
-Point findLineAndVP(Mat& white, Mat& frame, Point& rec_point, int color, int WayToGo)
-{
+Point findLineAndVP(Mat& white, Mat& frame, Point& rec_point, int color, int WayToGo) {
 
 	Mat canny;
 
@@ -469,7 +487,7 @@ vector<vector<Point> > findandDrawContour(Mat &roi, char* windowName) {
 
 	int k = 0, j = 0;
 	int minSizeOfRect = 100;
-	int maxSizeOfRect = 1000;
+	int maxSizeOfRect = 20000;
 
 	int mode = RETR_EXTERNAL;
 	//  int mode = RETR_FLOODFILL;
@@ -483,7 +501,7 @@ vector<vector<Point> > findandDrawContour(Mat &roi, char* windowName) {
 
 	vector<Vec4i> hierarchy;
 	findContours(roi, contours, hierarchy, mode, method);
-	cout << "contours.size()=" << contours.size() << endl;
+	cout <<endl<< "contours.size()=" << contours.size() << endl;
 
 	cvtColor(roi, roi, COLOR_GRAY2BGR);
 
@@ -496,21 +514,26 @@ vector<vector<Point> > findandDrawContour(Mat &roi, char* windowName) {
 
 		for (int i = 0; i < contours.size(); i++) {
 			Rect temp = boundingRect(Mat(contours[i]));
-//			if ((temp.area() < minSizeOfRect && temp.area() > 1) || temp.area() > maxSizeOfRect)
-//			{
+		//	if (temp.area() > minSizeOfRect && temp.area() < maxSizeOfRect)	{
+		//		cout << " k " << k << ":  " << temp.area()<< "  ||";
 				rect[k] = temp;
 				k++;
-//			}
+				
+		//	}
 		}
 
-		for (int i = 0; i < k; i++)
-			 rectangle(roi, rect[i], color, 0.5, 8, 0);
+
+
+
+		/*for (int i = 0; i < k; i++)
+			 rectangle(roi, rect[i], color, 0.5, 8, 0); */
 
 		char name[10];
 		for (int i = 0; i < k; i++)      {
-			cout << "===================================" << endl;
+			cout <<endl << "===================================" << endl;
 			sprintf(name, "Mat%d", i);
 			matArr[i] = Mat(roi, rect[i]);
+			Mat Cur_Mat = matArr[i];
 			Mat calcMat;
 			cvtColor(matArr[i], calcMat, CV_BGR2GRAY);
 			//namedWindow(name, CV_WINDOW_NORMAL);
@@ -526,13 +549,17 @@ vector<vector<Point> > findandDrawContour(Mat &roi, char* windowName) {
 				count_white = countNonZero(rowMat);
 
 				whiteCount[y] = count_white;
-				cout << "whiteCount at row " << y << ":  "<< count_white<< endl;
+				//cout << "whiteCount at row " << y << ":  "<< count_white<< endl;
 			}
 
-
+			int maxCount = -1, minCount = 1000;
 			float sum = 0.0, mean = 0.0, standardDeviation = 0.0;
 			for (int z = 0; z < row; z++) {
 				sum += whiteCount[z];
+				if (whiteCount[z] > maxCount)
+					maxCount = whiteCount[z];
+				if (whiteCount[z] < minCount)
+					minCount = whiteCount[z];
 			}
 
 			mean = sum / row;
@@ -541,12 +568,15 @@ vector<vector<Point> > findandDrawContour(Mat &roi, char* windowName) {
 				standardDeviation += pow(whiteCount[zz] - mean, 2);
 
 			int stdevOfWhite = sqrt(standardDeviation / row);
-			cout << "STD_Y: " << i << ": "<< stdevOfWhite << endl;
+			cout << "STD_Y " << i << ": "<< stdevOfWhite ;
 
-			// give condition after this
+/*************** give condition after this  ***************/
 
-			if (stdevOfWhite > 20)
+			if (stdevOfWhite >= 20 || mean >= 40 || (mean-stdevOfWhite) > 25)
 			  matArr[i].setTo(0);
+			else 
+				cout << " mean is: " << mean << " max is: " << maxCount << " min is: " << minCount << endl;
+			
 		}
 	}
 	return contours;
@@ -567,12 +597,15 @@ int main() {
 	capture.read(frame);
 
 	// videoRead
-
+	int n = 0; 
 	while (capture.read(frame)) {
 
 		origin = frame.clone();
-		lane_detection(frame);
 
+
+		cout << n <<endl;
+		lane_detection(frame);
+		n++;
 		imshow("frame", frame); //show the original frame
 		//imshow("origin",origin);
 		key = waitKey(frame_rate);
