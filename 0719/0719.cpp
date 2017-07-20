@@ -9,13 +9,12 @@
 using namespace std;
 using namespace cv;
 
-void lane_detect(Mat& frame);
-Point findLineAndVP(Mat& white, Mat& frame, Point& rec_point);
-vector<vector<Point> > findandDrawContour(Mat& roi, char* windowName);
+void findandDrawContour(Mat& roi, char* windowName);
+Mat preprocess(Mat& frame);
+Point findLineAndVP(Mat& white, Mat& frame, Point& rec_point, float& prev_Rslope, float& prev_Lslope, Point intersectionPoint);
 
-float prev_Rslope = 0, prev_Lslope = 0; 
 
-void lane_detect(Mat& frame) {
+Mat preprocess(Mat& frame) {
 	Mat gray, smot, sub, hsv, white, yellow, both, canny, left, right;
 	Mat sub1, sub2, sub3, sub4, smot1, smot2, smot3, smot4, gray1, gray2, gray3, gray4, white1, white2, white3, white4, gray_original_sub;
 	Mat grayl3, grayl4, grayr3, grayr4; //gray areas.
@@ -23,9 +22,7 @@ void lane_detect(Mat& frame) {
 	Mat contourCanny;
 
 	vector<Vec4i> lines;
-	Mat matForCalc;
 	Mat matForContour;
-	Mat originalFrame;
 	Mat contour;
 
 	char contourWindow[20] = "Contour";
@@ -49,141 +46,17 @@ void lane_detect(Mat& frame) {
 	contour = matForContour(rec3_4);
 	Canny(contour, contourCanny, 200, 400);
 
-	
 	dilate(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
 	erode(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
 	dilate(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
 	erode(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
-	
 
 	imshow("CannyforContour", contourCanny);
-
-	vector<vector<Point> > pointSetContour;
-	pointSetContour = findandDrawContour(contourCanny, contourWindow);
-
-	imshow("After Contour", contourCanny);
-
-	Point vp4 = findLineAndVP(contourCanny, frame, rec3_4_point);
-
-/*	Rect rec(interest_x, interest_y, width, height); // Road_Region 
-	Point rec3_point(interest_x, interest_y + subROIHeight * 3);
-	Rect rec3(rec3_point, Size(width, subROIHeight * 3)); // ROI3
-	Point rec4_point(interest_x, interest_y + subROIHeight * 6);
-	Rect rec4(rec4_point, Size(width, subROIHeight * 10));
-	sub3 = matForContour(rec3);
-	sub4 = matForContour(rec4);
-	Mat con3, con4;
-	con3 = contourCanny(recCon3);
-	con4 = contourCanny(recCon4);
-	imshow("con3", con3);
-	imshow("con4", con4);
-	default value of PrewayToGo is straight.
-	Point vp3 = findLineAndVP(con3, frame, rec3_point, 3);
-	Point vp4 = findLineAndVP(con4, frame, rec4_point, 4); */
+	findandDrawContour(contourCanny, contourWindow);
+	return contourCanny;
 }
 
-Point findLineAndVP(Mat& white, Mat& frame, Point& rec_point) {
-	//declaration of x,y variables used in lines.
-	float x1 = 0, x2 = 0, y1 = 0, y2 = 0; 
-	float x3 = 0, x4 = 0, y3 = 0, y4 = 0;
-	//initiate for the first time when there are no input values.
-	float countright = 0, countleft = 0;
-
-	float a1 = 0, a2 = 0, a3 = 0, a4 = 0;
-	float b1 = 0, b2 = 0, b3 = 0, b4 = 0;
-	int x = 0, y = 0;
-
-	//convert white Matrix to canny Matrix.
-	Mat canny;
-	Canny(white, canny, 150, 300, 3);
-	vector<Vec4i> lines;
-	vector<Point> pointList;
-	//20, 10, 140
-	HoughLinesP(canny, lines, 1, CV_PI / 180, 20, 10, 140);
-	//Merge part
-	float selected_slopeR = 0;
-	float selected_slopeL = 0;
-
-	for (size_t i = 0; i < lines.size(); i++) {
-		Vec4i l = lines[i];
-		float slope = (((float)l[3] - (float)l[1]) / ((float)l[2] - (float)l[0]));
-		
-		//lines of right side
-		if (slope >= 0.3 && slope <= 3) {
-			countright++;
-			x1 += l[0];
-			y1 += l[1] + rec_point.y;
-			x2 += l[2];
-			y2 += l[3] + rec_point.y;
-			selected_slopeR = slope;
-		}
-
-		//lines of left side
-		if (slope <= -0.3  && slope >= -3) {
-			countleft++;
-			x3 += l[0];
-			y3 += l[1] + rec_point.y;
-			x4 += l[2];
-			y4 += l[3] + rec_point.y;
-			selected_slopeL = slope;
-		}
-	}
-	float Rslope, Lslope; 
-	//if it is the first time, put initial values.
-	if (countright == 0 && prev_Rslope != 0) {
-		Rslope = prev_Rslope;
-	} else  {
-		Rslope = (y2 - y1) / (x2 - x1);
-		prev_Rslope = Rslope; 
-	}
-
-	if (countleft == 0 && prev_Lslope != 0) {
-		Lslope = prev_Lslope;
-	} else {
-		Lslope = (y4 - y3) / (x4 - x3);
-		prev_Lslope = Lslope;
-	}
-
-	float rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
-	float lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
-
-	float lastx1 = (0 - rb) / Rslope;
-	float lastx2 = (frame.rows - rb) / Rslope;
-	float lastx3 = ((0 - lb) / Lslope);
-	float lastx4 = ((frame.rows - lb) / Lslope);
-
-	//point of line will be drawn. extend to the end of the frame.
-	// a1 = lastx1 + x, a2 = lastx2 + x, a3 = lastx3 + x, a4 = lastx4 + x;
-	a1 = lastx1, a2 = lastx2, a3 = lastx3, a4 = lastx4;
-	b1 = 0, b2 = frame.rows, b3 = 0, b4 = frame.rows;
-
-	float dataA[] = { (b2 - b1) / (a2 - a1), -1, (b4 - b3) / (a4 - a3), -1 };
-	Mat A(2, 2, CV_32F, dataA);
-	Mat invA;
-	invert(A, invA);
-
-	float dataB[] = { a1*(b2 - b1) / (a2 - a1) - b1, a3*(b4 - b3) / (a4 - a3) - b3 };
-	Mat B(2, 1, CV_32F, dataB);
-	//vanishing point.
-	Mat X = invA*B;
-
-	line(frame, Point(a1, 0), Point(a2, frame.rows), Scalar(255,200,20), 3);
-	line(frame, Point(a3, 0), Point(a4, frame.rows), Scalar(255, 200, 20), 3);
-	circle(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), 5, Scalar(255, 200, 20), 3, LINE_AA);
-
-	float innerAngleL = 0;
-	float innerAngleR = 0;
-	float innerA = 0;
-	innerAngleR = abs(tan(((X.at<float>(0, 0)) - a1) / ((X.at<float>(1, 0)))));
-	innerAngleL = abs(tan(((X.at<float>(0, 0)) - a3) / ((X.at<float>(1, 0)))));
-	innerA = innerAngleR + innerAngleL;
-	innerAngleR = (innerAngleR*180.0 / CV_PI);
-	innerAngleL = (innerAngleL*180.0 / CV_PI);
-
-	return Point(X.at<float>(0, 0), X.at<float>(1, 0));
-}
-
-vector<vector<Point> > findandDrawContour(Mat &roi, char* windowName) {
+void findandDrawContour(Mat &roi, char* windowName) {
 	vector<vector<Point> > contours;
 
 	int k = 0;
@@ -212,9 +85,6 @@ vector<vector<Point> > findandDrawContour(Mat &roi, char* windowName) {
 			Mat Cur_Mat = matArr[i];
 			Mat calcMat;
 			cvtColor(matArr[i], calcMat, CV_BGR2GRAY);
-			//namedWindow(name, CV_WINDOW_NORMAL);
-			//imshow(name, Cur_Mat);
-
 			int row = matArr[i].rows;
 			vector<int> whiteCount(row);
 			for (int y = 0; y < row; y++) {
@@ -222,7 +92,6 @@ vector<vector<Point> > findandDrawContour(Mat &roi, char* windowName) {
 				Mat rowMat = calcMat.row(y);
 				count_white = countNonZero(rowMat);
 				whiteCount[y] = count_white;
-				//cout << "whiteCount at row " << y << ":  "<< count_white<< endl;
 			}
 
 			int maxCount = -1, minCount = 1000;
@@ -241,29 +110,143 @@ vector<vector<Point> > findandDrawContour(Mat &roi, char* windowName) {
 				standardDeviation += pow(whiteCount[zz] - mean, 2);
 
 			int stdevOfWhite = sqrt(standardDeviation / row);
-		//	cout << "STD_Y " << i << ": " << stdevOfWhite;
 
-			/*************** give condition after this  ***************/
+			/*************** condition to delete non_lane contours ***************/
 			if (stdevOfWhite >= 15 || mean >= 40 || (mean - stdevOfWhite) > 25)
 				matArr[i].setTo(0);
 		}
 	}
-	return contours;
+}
+
+Point findLineAndVP(Mat& white, Mat& frame, float& prev_Rslope, float& prev_Lslope, Point intersectionPoint) {
+	Point rec_point(0, 168 + ((frame.rows - 168) / 16) * 3);
+
+	//declaration of x,y variables used in lines.
+	float x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+	float x3 = 0, x4 = 0, y3 = 0, y4 = 0;
+	//initiate for the first time when there are no input values.
+	float countright = 0, countleft = 0;
+
+	float a1 = 0, a2 = 0, a3 = 0, a4 = 0;
+	float b1 = 0, b2 = 0, b3 = 0, b4 = 0;
+	int x = 0, y = 0;
+
+	//convert white Matrix to canny Matrix.
+	Mat canny;
+	Canny(white, canny, 150, 300, 3);
+	vector<Vec4i> lines;
+	vector<Point> pointList;
+	//20, 10, 140
+	HoughLinesP(canny, lines, 1, CV_PI / 180, 20, 10, 140);
+	//Merge part
+	float selected_slopeR = 0;
+	float selected_slopeL = 0;
+
+	for (size_t i = 0; i < lines.size(); i++) {
+		Vec4i l = lines[i];
+		float slope = (((float)l[3] - (float)l[1]) / ((float)l[2] - (float)l[0]));
+
+		//lines of right side
+		if (slope >= 0.3 && slope <= 3) {
+			countright++;
+			x1 += l[0];
+			y1 += l[1] + rec_point.y;
+			x2 += l[2];
+			y2 += l[3] + rec_point.y;
+			selected_slopeR = slope;
+		}
+		//lines of left side
+		if (slope <= -0.3  && slope >= -3) {
+			countleft++;
+			x3 += l[0];
+			y3 += l[1] + rec_point.y;
+			x4 += l[2];
+			y4 += l[3] + rec_point.y;
+			selected_slopeL = slope;
+		}
+	}
+
+	float Rslope, Lslope, rb, lb;
+	//if it is the first time, put initial values.
+
+
+	/*RIGHT LANE*/
+	if (countright == 0 && prev_Rslope != 0) {
+		Rslope = prev_Rslope;
+		rb = intersectionPoint.y - Rslope * intersectionPoint.x;
+	}
+	else  {
+		Rslope = (y2 - y1) / (x2 - x1);
+		prev_Rslope = Rslope;
+		rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
+	}
+
+
+	/*LEFT LANE*/
+	if (countleft == 0 && prev_Lslope != 0) {
+		Lslope = prev_Lslope;
+		lb = intersectionPoint.y - Lslope * intersectionPoint.x;
+	}
+	else {
+		Lslope = (y4 - y3) / (x4 - x3);
+		prev_Lslope = Lslope;
+		lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
+	}
+
+	float lastx1 = (0 - rb) / Rslope;
+	float lastx2 = (frame.rows - rb) / Rslope;
+	float lastx3 = ((0 - lb) / Lslope);
+	float lastx4 = ((frame.rows - lb) / Lslope);
+
+	//point of line will be drawn. extend to the end of the frame.
+	// a1 = lastx1 + x, a2 = lastx2 + x, a3 = lastx3 + x, a4 = lastx4 + x;
+	a1 = lastx1, a2 = lastx2, a3 = lastx3, a4 = lastx4;
+	b1 = 0, b2 = frame.rows, b3 = 0, b4 = frame.rows;
+
+	float dataA[] = { (b2 - b1) / (a2 - a1), -1, (b4 - b3) / (a4 - a3), -1 };
+	Mat A(2, 2, CV_32F, dataA);
+	Mat invA;
+	invert(A, invA);
+
+	float dataB[] = { a1*(b2 - b1) / (a2 - a1) - b1, a3*(b4 - b3) / (a4 - a3) - b3 };
+	Mat B(2, 1, CV_32F, dataB);
+	//vanishing point.
+	Mat X = invA*B;
+
+	line(frame, Point(a1, 0), Point(a2, frame.rows), Scalar(255, 200, 20), 3);
+	line(frame, Point(a3, 0), Point(a4, frame.rows), Scalar(255, 200, 20), 3);
+	circle(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), 5, Scalar(255, 200, 20), 3, LINE_AA);
+
+	float innerAngleL = 0;
+	float innerAngleR = 0;
+	float innerA = 0;
+	innerAngleR = abs(tan(((X.at<float>(0, 0)) - a1) / ((X.at<float>(1, 0)))));
+	innerAngleL = abs(tan(((X.at<float>(0, 0)) - a3) / ((X.at<float>(1, 0)))));
+	innerA = innerAngleR + innerAngleL;
+	innerAngleR = (innerAngleR*180.0 / CV_PI);
+	innerAngleL = (innerAngleL*180.0 / CV_PI);
+
+	return Point(X.at<float>(0, 0), X.at<float>(1, 0));
 }
 
 int main() {
 	char title[100] = "mono.mp4";
 	VideoCapture capture(title);
 
-	Mat frame;
-	int key, frameNum = 1,frame_rate = 30;
-	vector<Point> io_prev_lanes; 
+	Mat frame, afterPreprocess;
+	int key, frameNum = 1, frame_rate = 30;
+	vector<Point> io_prev_lanes;
+	float prev_Rslope = 0, prev_Lslope = 0;
+	Point prev_intersectionPoint(0, 0);
 
 	// videoRead
 	while (1) {
 		if (!capture.read(frame))
 			break;
-		lane_detect(frame);
+
+		afterPreprocess = preprocess(frame);
+		imshow("afterPreprocess", afterPreprocess);
+		prev_intersectionPoint = findLineAndVP(afterPreprocess, frame, prev_Rslope, prev_Lslope, prev_intersectionPoint);
 		imshow("frame", frame);
 
 		key = waitKey(frame_rate);
@@ -278,6 +261,5 @@ int main() {
 		}
 		frameNum++;
 	}
-	
 	return 0;
 }
