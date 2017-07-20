@@ -10,6 +10,8 @@
 #include <iomanip>
 #include <string>
 #include <sstream>
+#include <functional>   // std::minus
+#include <numeric>
 #include "MSAC.h"
 
 using namespace std;
@@ -20,6 +22,7 @@ Mat preprocess(Mat& frame);
 Point findLineAndVP(Mat& white, Mat& frame, Point& rec_point, float& prev_Rslope, float& prev_Lslope, Point intersectionPoint);
 void laneMarkingsDetector(Mat& srcGray, Mat& dstGray, int tau);
 float SplitROI(Mat& ROI, Mat& img, Mat& output, int Num_ROI,Point rec,int interest_y);
+vector<Point> stable_VP;
 
 Mat preprocess(Mat& frame) {
 	Mat gray, smot, sub, hsv, white, yellow, both, canny, left, right;
@@ -91,7 +94,7 @@ Mat preprocess(Mat& frame) {
     ROI_MSAC = thresh(roiRect);
     
     float location = 0;
-    location = SplitROI(ROI_MSAC, frame, output, 1, rec_MSAC, interest_y_MSAC);
+    location = SplitROI(ROI_MSAC, frame, frame, 1, rec_MSAC, interest_y_MSAC);
 
     
 
@@ -172,114 +175,122 @@ void findandDrawContour(Mat &roi, char* windowName) {
 }
 
 Point findLineAndVP(Mat& white, Mat& frame, float& prev_Rslope, float& prev_Lslope, Point intersectionPoint) {
-	Point rec_point(0, 168 + ((frame.rows - 168) / 16) * 3);
-
-	//declaration of x,y variables used in lines.
-	float x1 = 0, x2 = 0, y1 = 0, y2 = 0;
-	float x3 = 0, x4 = 0, y3 = 0, y4 = 0;
-	//initiate for the first time when there are no input values.
-	float countright = 0, countleft = 0;
-
-	float a1 = 0, a2 = 0, a3 = 0, a4 = 0;
-	float b1 = 0, b2 = 0, b3 = 0, b4 = 0;
-	int x = 0, y = 0;
-
-	//convert white Matrix to canny Matrix.
-	Mat canny;
-	Canny(white, canny, 150, 300, 3);
-	vector<Vec4i> lines;
-	vector<Point> pointList;
-	//20, 10, 140
-	HoughLinesP(canny, lines, 1, CV_PI / 180, 20, 10, 140);
-	//Merge part
-	float selected_slopeR = 0;
-	float selected_slopeL = 0;
-
-	for (size_t i = 0; i < lines.size(); i++) {
-		Vec4i l = lines[i];
-		float slope = (((float)l[3] - (float)l[1]) / ((float)l[2] - (float)l[0]));
-
-		//lines of right side
-		if (slope >= 0.3 && slope <= 3) {
-			countright++;
-			x1 += l[0];
-			y1 += l[1] + rec_point.y;
-			x2 += l[2];
-			y2 += l[3] + rec_point.y;
-			selected_slopeR = slope;
-		}
-		//lines of left side
-		if (slope <= -0.3  && slope >= -3) {
-			countleft++;
-			x3 += l[0];
-			y3 += l[1] + rec_point.y;
-			x4 += l[2];
-			y4 += l[3] + rec_point.y;
-			selected_slopeL = slope;
-		}
-	}
-
-	float Rslope, Lslope, rb, lb;
-	//if it is the first time, put initial values.
-
-
-	/*RIGHT LANE*/
-	if (countright == 0 && prev_Rslope != 0) {
-		Rslope = prev_Rslope;
-		rb = intersectionPoint.y - Rslope * intersectionPoint.x;
-	}
-	else  {
-		Rslope = (y2 - y1) / (x2 - x1);
-		prev_Rslope = Rslope;
-		rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
-	}
-
-
-	/*LEFT LANE*/
-	if (countleft == 0 && prev_Lslope != 0) {
-		Lslope = prev_Lslope;
-		lb = intersectionPoint.y - Lslope * intersectionPoint.x;
-	}
-	else {
-		Lslope = (y4 - y3) / (x4 - x3);
-		prev_Lslope = Lslope;
-		lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
-	}
-
-	float lastx1 = (0 - rb) / Rslope;
-	float lastx2 = (frame.rows - rb) / Rslope;
-	float lastx3 = ((0 - lb) / Lslope);
-	float lastx4 = ((frame.rows - lb) / Lslope);
-
-	//point of line will be drawn. extend to the end of the frame.
-	// a1 = lastx1 + x, a2 = lastx2 + x, a3 = lastx3 + x, a4 = lastx4 + x;
-	a1 = lastx1, a2 = lastx2, a3 = lastx3, a4 = lastx4;
-	b1 = 0, b2 = frame.rows, b3 = 0, b4 = frame.rows;
-
-	float dataA[] = { (b2 - b1) / (a2 - a1), -1, (b4 - b3) / (a4 - a3), -1 };
-	Mat A(2, 2, CV_32F, dataA);
-	Mat invA;
-	invert(A, invA);
-
-	float dataB[] = { a1*(b2 - b1) / (a2 - a1) - b1, a3*(b4 - b3) / (a4 - a3) - b3 };
-	Mat B(2, 1, CV_32F, dataB);
-	//vanishing point.
-	Mat X = invA*B;
-
-	line(frame, Point(a1, 0), Point(a2, frame.rows), Scalar(255, 200, 20), 3);
-	line(frame, Point(a3, 0), Point(a4, frame.rows), Scalar(255, 200, 20), 3);
-	circle(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), 5, Scalar(255, 200, 20), 3, LINE_AA);
-
-	float innerAngleL = 0;
-	float innerAngleR = 0;
-	float innerA = 0;
-	innerAngleR = abs(tan(((X.at<float>(0, 0)) - a1) / ((X.at<float>(1, 0)))));
-	innerAngleL = abs(tan(((X.at<float>(0, 0)) - a3) / ((X.at<float>(1, 0)))));
-	innerA = innerAngleR + innerAngleL;
-	innerAngleR = (innerAngleR*180.0 / CV_PI);
-	innerAngleL = (innerAngleL*180.0 / CV_PI);
-
-	return Point(X.at<float>(0, 0), X.at<float>(1, 0));
+    Point rec_point(0, 168 + ((frame.rows - 168) / 16) * 3);
+    
+    //declaration of x,y variables used in lines.
+    float x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    float x3 = 0, x4 = 0, y3 = 0, y4 = 0;
+    //initiate for the first time when there are no input values.
+    float countright = 0, countleft = 0;
+    
+    float a1 = 0, a2 = 0, a3 = 0, a4 = 0;
+    float b1 = 0, b2 = 0, b3 = 0, b4 = 0;
+    int x = 0, y = 0;
+    
+    //convert white Matrix to canny Matrix.
+    Mat canny;
+    Canny(white, canny, 150, 300, 3);
+    vector<Vec4i> lines;
+    vector<Point> pointList;
+    //20, 10, 140
+    HoughLinesP(canny, lines, 1, CV_PI / 180, 20, 10, 140);
+    
+    for (size_t i = 0; i < lines.size(); i++) {
+        Vec4i l = lines[i];
+        line(frame, Point(l[0], l[1] + rec_point.y), Point(l[2], l[3] + rec_point.y), Scalar(0, 0, 255), 1);
+    }
+    
+    //Merge part
+    float selected_slopeR = 0;
+    float selected_slopeL = 0;
+    
+    for (size_t i = 0; i < lines.size(); i++) {
+        Vec4i l = lines[i];
+        float slope = (((float)l[3] - (float)l[1]) / ((float)l[2] - (float)l[0]));
+        
+        //lines of right side
+        if (slope >= 0.3 && slope <= 3) {
+            countright++;
+            x1 += l[0];
+            y1 += l[1] + rec_point.y;
+            x2 += l[2];
+            y2 += l[3] + rec_point.y;
+            selected_slopeR = slope;
+            line(frame, Point(l[0], l[1] + rec_point.y), Point(l[2], l[3] + rec_point.y), Scalar(0, 255, 0), 1);
+        }
+        //lines of left side
+        if (slope <= -0.3  && slope >= -3) {
+            countleft++;
+            x3 += l[0];
+            y3 += l[1] + rec_point.y;
+            x4 += l[2];
+            y4 += l[3] + rec_point.y;
+            selected_slopeL = slope;
+            line(frame, Point(l[0], l[1] + rec_point.y), Point(l[2], l[3] + rec_point.y), Scalar(0, 255, 0), 1);
+        }
+    }
+    
+    float Rslope, Lslope, rb, lb;
+    //if it is the first time, put initial values.
+    
+    
+    /*RIGHT LANE*/
+    if (countright == 0 && prev_Rslope != 0) {
+        Rslope = prev_Rslope;
+        rb = intersectionPoint.y - Rslope * intersectionPoint.x;
+    }
+    else  {
+        Rslope = (y2 - y1) / (x2 - x1);
+        prev_Rslope = Rslope;
+        rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
+    }
+    
+    
+    /*LEFT LANE*/
+    if (countleft == 0 && prev_Lslope != 0) {
+        Lslope = prev_Lslope;
+        lb = intersectionPoint.y - Lslope * intersectionPoint.x;
+    }
+    else {
+        Lslope = (y4 - y3) / (x4 - x3);
+        prev_Lslope = Lslope;
+        lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
+    }
+    
+    float lastx1 = (0 - rb) / Rslope;
+    float lastx2 = (frame.rows - rb) / Rslope;
+    float lastx3 = ((0 - lb) / Lslope);
+    float lastx4 = ((frame.rows - lb) / Lslope);
+    
+    //point of line will be drawn. extend to the end of the frame.
+    a1 = lastx1, a2 = lastx2, a3 = lastx3, a4 = lastx4;
+    b1 = 0, b2 = frame.rows, b3 = 0, b4 = frame.rows;
+    
+    float dataA[] = { (b2 - b1) / (a2 - a1), -1, (b4 - b3) / (a4 - a3), -1 };
+    Mat A(2, 2, CV_32F, dataA);
+    Mat invA;
+    invert(A, invA);
+    
+    float dataB[] = { a1*(b2 - b1) / (a2 - a1) - b1, a3*(b4 - b3) / (a4 - a3) - b3 };
+    Mat B(2, 1, CV_32F, dataB);
+    //vanishing point.
+    Mat X = invA*B;
+    
+    line(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), Point(a2, frame.rows), Scalar(255, 0, 0), 2);
+    line(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), Point(a4, frame.rows), Scalar(255, 0, 0), 2);
+    
+    circle(frame, Point(X.at<float>(0, 0), X.at<float>(1, 0)), 5, Scalar(255, 200, 20), 3, LINE_AA);
+    
+    float innerAngleL = 0;
+    float innerAngleR = 0;
+    float innerA = 0;
+    innerAngleR = abs(tan(((X.at<float>(0, 0)) - a1) / ((X.at<float>(1, 0)))));
+    innerAngleL = abs(tan(((X.at<float>(0, 0)) - a3) / ((X.at<float>(1, 0)))));
+    innerA = innerAngleR + innerAngleL;
+    innerAngleR = (innerAngleR*180.0 / CV_PI);
+    innerAngleL = (innerAngleL*180.0 / CV_PI);
+    
+    return Point(X.at<float>(0, 0), X.at<float>(1, 0));
 }
 
 void laneMarkingsDetector(Mat& srcGray, Mat& dstGray, int tau)
@@ -400,27 +411,37 @@ float SplitROI(Mat& ROI, Mat& img, Mat& output, int Num_ROI,Point rec,int intere
 //            //                    if(y+rec.y>interest_y)
 //            circle(output, Point(x+rec.x, y+rec.y), 5, Scalar(0, 255,0), -1);
 //        else if(Num_ROI==2)
-//            //                    if(y+rec.y<interest_y)
-            circle(output, Point(x+rec.x, y+rec.y), 5, Scalar(0, 0, 255), -1);
+           //                    if(y+rec.y<interest_y)
+//            circle(output, Point(x+rec.x, y+rec.y), 5, Scalar(0, 0, 255), -1);
         if(Num_ROI==1)
-            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(255, 0, 255), -1);
+            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(0, 0, 255), -1);
         
+        stable_VP.push_back(Point(pre_x+rec.x, pre_y+rec.y));
+        if(stable_VP.size()==5)
+        {
+//            accumulate(stable_VP.begin(), stable_VP.end(),0);
+//            int Ax = accumulate(stable_VP.begin()->x,stable_VP.end()->x,0) / 5;
+//             int Ay = accumulate(stable_VP.begin()->y,stable_VP.end()->y,0) / 5;
+//            
+//            circle(output, Point(Ax, Ay), 5, Scalar(255, 0, 0), -1);
+            
+        }
     }
     
-
-    else
-    {
-        if(Num_ROI==3)
-            //                    if(pre_y+rec.y>interest_y)
-            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(0, 255,0), -1);
-        else if(Num_ROI==2)
-            //                    if(pre_y+rec.y<interest_y)
-            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(0, 0, 255), -1);
-        else if(Num_ROI==1)
-            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(255, 0, 255), -1);
-        
-        cout << "pre point" << endl;
-    }
+//
+//    else
+//    {
+//        if(Num_ROI==3)
+//            //                    if(pre_y+rec.y>interest_y)
+//            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(0, 255,0), -1);
+//        else if(Num_ROI==2)
+//            //                    if(pre_y+rec.y<interest_y)
+//            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(0, 0, 255), -1);
+//        else if(Num_ROI==1)
+//            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(255, 0, 255), -1);
+//        
+//        cout << "pre point" << endl;
+//    }
     
     imshow("img",img);
     imshow("Result", output);
