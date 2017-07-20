@@ -5,6 +5,12 @@
 #include <iostream>
 #include <algorithm>
 #include <stdio.h>
+#include <cstdlib>
+#include <ctime>
+#include <iomanip>
+#include <string>
+#include <sstream>
+#include "MSAC.h"
 
 using namespace std;
 using namespace cv;
@@ -12,7 +18,8 @@ using namespace cv;
 void findandDrawContour(Mat& roi, char* windowName);
 Mat preprocess(Mat& frame);
 Point findLineAndVP(Mat& white, Mat& frame, Point& rec_point, float& prev_Rslope, float& prev_Lslope, Point intersectionPoint);
-
+void laneMarkingsDetector(Mat& srcGray, Mat& dstGray, int tau);
+float SplitROI(Mat& ROI, Mat& img, Mat& output, int Num_ROI,Point rec,int interest_y);
 
 Mat preprocess(Mat& frame) {
 	Mat gray, smot, sub, hsv, white, yellow, both, canny, left, right;
@@ -27,7 +34,8 @@ Mat preprocess(Mat& frame) {
 
 	char contourWindow[20] = "Contour";
 
-	int interest_y = 168; // height of RoadRegion 
+	int interest_y = 168; // height of RoadRegion
+    int interest_y_MSAC = frame.rows / 3; //ROI value of y
 	int interest_x = 0;
 	int width = frame.cols - interest_x; //width of ROI
 	int height = frame.rows - interest_y; //height of ROI
@@ -41,6 +49,51 @@ Mat preprocess(Mat& frame) {
 	// Setting ROIs
 	Point rec3_4_point(interest_x, interest_y + subROIHeight * 3);
 	Rect rec3_4(rec3_4_point, Size(width, subROIHeight * 13));
+    
+    /**************** MSAC ********************/
+    Mat output;
+    output = frame.clone();
+
+    //convert type to gray
+    Mat MSAC_gray;
+    cvtColor(frame, MSAC_gray, CV_BGR2GRAY);
+    
+    //get roi
+    Point rec_MSAC(interest_x, interest_y_MSAC);
+    Rect roiRect(0, MSAC_gray.rows / 3 , MSAC_gray.cols, MSAC_gray.rows / 3 *2);
+    Mat roi = MSAC_gray(roiRect).clone();
+    imshow("ROI", roi);
+    Mat Roi;
+    
+    //set a ROI to the original input image at proper location.
+    //BORDER_CONSTANT is border type. It always give -1 as a return.
+    copyMakeBorder(roi, Roi, MSAC_gray.rows / 3, 0, 0, 0, BORDER_CONSTANT, Scalar(255, 0, 0));
+    
+    //apply marking detect algrithm
+    Mat MarkingResult(Roi.rows, Roi.cols, Roi.type());
+    //tau is divisor function in number theory.
+    int tau = 18;
+    //pre-processing to get binary image. (Almost similar to binary image)
+    laneMarkingsDetector(Roi, MarkingResult, tau);
+    imshow("Lane Marking Result", MarkingResult);
+    
+    
+//    Point rec2and3_point(interest_x, interest_y);
+//    Point rec2and3_Rpoint(interest_x+halfWidth, interest_y);
+//    Rect rec2and3(rec2_point, Size(width, subROIHeight * 6)); // ROI 2
+    
+    //Thresholding
+    Mat thresh;
+    threshold(MarkingResult, thresh, 50, 255, THRESH_BINARY);
+    imshow("Threshold", thresh);
+    
+    Mat ROI_MSAC ;
+    ROI_MSAC = thresh(roiRect);
+    
+    float location = 0;
+    location = SplitROI(ROI_MSAC, frame, output, 1, rec_MSAC, interest_y_MSAC);
+
+    
 
 	// use canny to make binary image
 	contour = matForContour(rec3_4);
@@ -229,8 +282,164 @@ Point findLineAndVP(Mat& white, Mat& frame, float& prev_Rslope, float& prev_Lslo
 	return Point(X.at<float>(0, 0), X.at<float>(1, 0));
 }
 
+void laneMarkingsDetector(Mat& srcGray, Mat& dstGray, int tau)
+{
+    //set all the pixels to 0 in dstGray.
+    dstGray.setTo(0);
+    
+    int aux = 0;
+    for (int j = 0; j < srcGray.rows; ++j)
+    {
+        //point of j th pixel of Row.
+        unsigned char *ptRowSrc = srcGray.ptr<uchar>(j);
+        unsigned char *ptRowDst = dstGray.ptr<uchar>(j);
+        
+        //tau is needed to cut left and right side of image.
+        for (int i = tau; i < srcGray.cols - tau; ++i)
+        {
+            if (ptRowSrc[i] != 0)
+            {
+                //
+                aux = 2 * ptRowSrc[i];
+                aux += -ptRowSrc[i - tau];
+                aux += -ptRowSrc[i + tau];
+                aux += -abs((int)(ptRowSrc[i - tau] - ptRowSrc[i + tau]));
+                
+                //
+                aux = (aux < 0) ? 0 : (aux);
+                aux = (aux > 255) ? 255 : (aux);
+                
+                ptRowDst[i] = (unsigned char)aux;
+                
+            }
+        }
+    }
+}
+
+/***************Finding MSAC***********/
+float SplitROI(Mat& ROI, Mat& img, Mat& output, int Num_ROI,Point rec,int interest_y)
+{
+    float location = 0 ;
+    //canny
+    Mat cannyDetect;
+    Canny(ROI, cannyDetect, 150, 300, 3);
+    //Use Hough transform
+    Mat canny;
+    Canny(ROI, canny, 30, 100);
+    vector<vector<cv::Point>> lineSegments;
+    vector<cv::Point> aux;
+    vector<Vec4i> lines;
+    int houghThreshold = 50;
+    if (img.cols*img.rows < 400 * 400)
+    {
+        houghThreshold = 50;
+    }
+    if(Num_ROI==4)
+        houghThreshold=5;
+    if(Num_ROI==3)
+        houghThreshold=5;
+    HoughLinesP(canny, lines, 1, CV_PI / 180, houghThreshold, 20, 10);
+    
+    while (lines.size() > 200) //to decrease threshold of houghlines.
+    {
+        lines.clear();
+        houghThreshold += 10;
+        cv::HoughLinesP(canny, lines, 1, CV_PI / 180, houghThreshold, 10, 10);
+    }
+    
+    
+    for (size_t i = 0; i < lines.size(); i++)
+    {
+        Point pt1, pt2;
+        pt1.x = lines[i][0];
+        pt1.y = lines[i][1];
+        pt2.x = lines[i][2];
+        pt2.y = lines[i][3];
+        //line(output, pt1+Point(rec.x,rec.y), pt2+Point(rec.x,rec.y), CV_RGB(0, 0, 0), 2);
+        
+        
+        // Store into vector of pairs of Points for msac
+        aux.clear();
+        aux.push_back(pt1);
+        aux.push_back(pt2);
+        lineSegments.push_back(aux);
+        
+    }
+    
+    std::vector<cv::Mat> vps;
+    vector<int> numInliers;
+    std::vector<std::vector<std::vector<cv::Point> > > lineSegmentsClusters;
+    
+    /*************MSAC Part ***************/
+    
+    //Initialization
+    MSAC msac;
+    msac.init(MODE_NIETO, Size(img.cols, img.rows), 1);
+    // Execution (passing as argument the lines obtained with the Hough transform)
+    msac.multipleVPEstimation(lineSegments, lineSegmentsClusters, numInliers, vps, 1);
+    
+    
+    
+    
+    //****** Marking vps found in MSAC **********/
+    
+    
+    int pre_x;
+    int pre_y;
+    
+    if (!vps.empty()){
+        int x = (int)vps[0].at<float>(0, 0);
+        int y = (int)vps[0].at<float>(1, 0);
+        
+        pre_x = x;
+        pre_y = y;
+        
+//        //                if(Num_ROI==4)
+//        //                  //  circle(output, Point(x+rec.x, y+rec.y), 5, Scalar(255, 0, 0), -1);
+//        if(Num_ROI==3)
+//            //                    if(y+rec.y>interest_y)
+//            circle(output, Point(x+rec.x, y+rec.y), 5, Scalar(0, 255,0), -1);
+//        else if(Num_ROI==2)
+//            //                    if(y+rec.y<interest_y)
+            circle(output, Point(x+rec.x, y+rec.y), 5, Scalar(0, 0, 255), -1);
+        if(Num_ROI==1)
+            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(255, 0, 255), -1);
+        
+    }
+    
+
+    else
+    {
+        if(Num_ROI==3)
+            //                    if(pre_y+rec.y>interest_y)
+            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(0, 255,0), -1);
+        else if(Num_ROI==2)
+            //                    if(pre_y+rec.y<interest_y)
+            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(0, 0, 255), -1);
+        else if(Num_ROI==1)
+            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(255, 0, 255), -1);
+        
+        cout << "pre point" << endl;
+    }
+    
+    imshow("img",img);
+    imshow("Result", output);
+    
+    if(Num_ROI==4)
+        imshow("Result4", ROI);
+    else if(Num_ROI==3)
+        imshow("Result3", ROI);
+    else if(Num_ROI==2)
+        imshow("Result2", ROI);
+    
+    return location;
+    
+}
+
+
+
 int main() {
-	char title[100] = "mono.mp4";
+	char title[100] = "/Users/NAMSOO/Documents/Xcode/OpenCV/mono.mp4";
 	VideoCapture capture(title);
 
 	Mat frame, afterPreprocess;
