@@ -14,6 +14,7 @@
 #include <numeric>
 #include "MSAC.h"
 
+
 using namespace std;
 using namespace cv;
 
@@ -22,7 +23,8 @@ Mat preprocess(Mat& frame);
 Point findLineAndVP(Mat& white, Mat& frame, Point& rec_point, float& prev_Rslope, float& prev_Lslope, Point intersectionPoint);
 void laneMarkingsDetector(Mat& srcGray, Mat& dstGray, int tau);
 float SplitROI(Mat& ROI, Mat& img, Mat& output, int Num_ROI,Point rec,int interest_y);
-vector<Point> stable_VP;
+vector<float> stable_VP_x;
+vector<float> stable_VP_y;
 
 Mat preprocess(Mat& frame) {
 	Mat gray, smot, sub, hsv, white, yellow, both, canny, left, right;
@@ -34,7 +36,6 @@ Mat preprocess(Mat& frame) {
 	vector<Vec4i> lines;
 	Mat matForContour;
 	Mat contour;
-
 	char contourWindow[20] = "Contour";
 
 	int interest_y = 168; // height of RoadRegion
@@ -46,8 +47,6 @@ Mat preprocess(Mat& frame) {
 
 	matForContour = frame.clone();
 
-	//VP standard
-	circle(frame, Point(frame.cols / 2, frame.rows / 4), 5, Scalar(0, 0, 0), 3, LINE_AA);
 
 	// Setting ROIs
 	Point rec3_4_point(interest_x, interest_y + subROIHeight * 3);
@@ -78,12 +77,7 @@ Mat preprocess(Mat& frame) {
     int tau = 18;
     //pre-processing to get binary image. (Almost similar to binary image)
     laneMarkingsDetector(Roi, MarkingResult, tau);
-    imshow("Lane Marking Result", MarkingResult);
-    
-    
-//    Point rec2and3_point(interest_x, interest_y);
-//    Point rec2and3_Rpoint(interest_x+halfWidth, interest_y);
-//    Rect rec2and3(rec2_point, Size(width, subROIHeight * 6)); // ROI 2
+//    imshow("Lane Marking Result", MarkingResult);
     
     //Thresholding
     Mat thresh;
@@ -345,10 +339,7 @@ float SplitROI(Mat& ROI, Mat& img, Mat& output, int Num_ROI,Point rec,int intere
     {
         houghThreshold = 50;
     }
-    if(Num_ROI==4)
-        houghThreshold=5;
-    if(Num_ROI==3)
-        houghThreshold=5;
+    
     HoughLinesP(canny, lines, 1, CV_PI / 180, houghThreshold, 20, 10);
     
     while (lines.size() > 200) //to decrease threshold of houghlines.
@@ -394,64 +385,54 @@ float SplitROI(Mat& ROI, Mat& img, Mat& output, int Num_ROI,Point rec,int intere
     
     //****** Marking vps found in MSAC **********/
     
-    
-    int pre_x;
-    int pre_y;
-    
+    //if VP is not null.
     if (!vps.empty()){
-        int x = (int)vps[0].at<float>(0, 0);
-        int y = (int)vps[0].at<float>(1, 0);
         
-        pre_x = x;
-        pre_y = y;
+        //get x and y values from MSAC function.
+        float x = vps[0].at<float>(0, 0);
+        float y = vps[0].at<float>(1, 0);
         
-//        //                if(Num_ROI==4)
-//        //                  //  circle(output, Point(x+rec.x, y+rec.y), 5, Scalar(255, 0, 0), -1);
-//        if(Num_ROI==3)
-//            //                    if(y+rec.y>interest_y)
-//            circle(output, Point(x+rec.x, y+rec.y), 5, Scalar(0, 255,0), -1);
-//        else if(Num_ROI==2)
-           //                    if(y+rec.y<interest_y)
-//            circle(output, Point(x+rec.x, y+rec.y), 5, Scalar(0, 0, 255), -1);
-        if(Num_ROI==1)
-            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(0, 0, 255), -1);
+        //get accumulated point and get median point.
+        static float stableX=x+rec.x;
+        static float stableY=y+rec.y;
         
-        stable_VP.push_back(Point(pre_x+rec.x, pre_y+rec.y));
-        if(stable_VP.size()==5)
+        //put X and Y values of the point to the vector.
+        stable_VP_x.push_back(x+rec.x);
+        stable_VP_y.push_back(y+rec.y);
+
+        
+        //the first vanishing point. it will be the criteria when we place a car in the center at the first time.
+        static float fisrt_X = stableX;
+        static float fisrt_Y = stableY;
+        
+        //marking the first vanising point.
+        circle(output, Point(fisrt_X, fisrt_Y), 5, Scalar(0, 0, 255), -1);
+        
+        //frame size is 5. every 5 frame, it updates the vanishing point.
+        if(stable_VP_x.size()==5)
         {
-//            accumulate(stable_VP.begin(), stable_VP.end(),0);
-//            int Ax = accumulate(stable_VP.begin()->x,stable_VP.end()->x,0) / 5;
-//             int Ay = accumulate(stable_VP.begin()->y,stable_VP.end()->y,0) / 5;
-//            
-//            circle(output, Point(Ax, Ay), 5, Scalar(255, 0, 0), -1);
             
+            
+            //accumulate
+            stableX = accumulate(stable_VP_x.begin(), stable_VP_x.end(), 0)/5;
+            stableY = accumulate(stable_VP_y.begin(), stable_VP_y.end(), 0)/5;
+            
+            circle(output, Point(stableX, stableY), 5, Scalar(255, 0, 0), -1);
+            
+            //clear vector storage
+            stable_VP_x.clear();
+            stable_VP_y.clear();
+            
+        }
+        
+        else
+        {
+            circle(output, Point(stableX, stableY), 5, Scalar(0, 255, 0), -1);
+
         }
     }
     
-//
-//    else
-//    {
-//        if(Num_ROI==3)
-//            //                    if(pre_y+rec.y>interest_y)
-//            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(0, 255,0), -1);
-//        else if(Num_ROI==2)
-//            //                    if(pre_y+rec.y<interest_y)
-//            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(0, 0, 255), -1);
-//        else if(Num_ROI==1)
-//            circle(output, Point(pre_x+rec.x, pre_y+rec.y), 5, Scalar(255, 0, 255), -1);
-//        
-//        cout << "pre point" << endl;
-//    }
-    
-    imshow("img",img);
     imshow("Result", output);
-    
-    if(Num_ROI==4)
-        imshow("Result4", ROI);
-    else if(Num_ROI==3)
-        imshow("Result3", ROI);
-    else if(Num_ROI==2)
-        imshow("Result2", ROI);
     
     return location;
     
