@@ -1,4 +1,3 @@
-	Mat contourCanny;
 //#include "opencv2/opencv.hpp"
 //#include <cmath>
 //#include "opencv/cv.hpp"

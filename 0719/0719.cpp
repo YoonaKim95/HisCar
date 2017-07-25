@@ -45,18 +45,41 @@ Mat preprocess(Mat& frame) {
   Point rec3_4_point(interest_x, interest_y + subROIHeight * 3);
   Rect rec3_4(rec3_4_point, Size(width, subROIHeight * 13));
 
+
+  Mat grayFrame, afterInRange, afterCanny;
+  int min, max;
   // use canny to make binary image
-  contour = matForContour(rec3_4);
-  Canny(contour, contourCanny, 200, 400);
+  cvtColor(frame, grayFrame, COLOR_BGR2GRAY);
+  GaussianBlur(grayFrame, grayFrame, Size(3, 3), 3);
 
-  dilate(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
-  erode(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
-  dilate(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
-  erode(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
+  Mat roi(grayFrame, rec3_4);
 
-  imshow("CannyforContour", contourCanny);
-  findandDrawContour(contourCanny, contourWindow);
-  return contourCanny;
+  getMinMax(roi, min, max);
+
+  inRange(roi, min, max, afterInRange);
+  Canny(afterInRange, afterCanny, 50, 100);
+
+  imshow("afterInRange", afterInRange);
+
+  dilate(afterCanny, afterCanny, Mat(), Point(-1, -1), 3);
+  erode(afterCanny, afterCanny, Mat(), Point(-1, -1), 3);
+  dilate(afterCanny, afterCanny, Mat(), Point(-1, -1), 3);
+  erode(afterCanny, afterCanny, Mat(), Point(-1, -1), 3);
+
+  findandDrawContour(afterCanny, contourWindow);
+
+  //// use canny to make binary image
+  //contour = matForContour(rec3_4);
+  //Canny(contour, contourCanny, 200, 400);
+
+  //dilate(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
+  //erode(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
+  //dilate(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
+  //erode(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
+
+  //imshow("CannyforContour", contourCanny);
+  //findandDrawContour(contourCanny, contourWindow);
+  return afterCanny;
 }
 
 void findandDrawContour(Mat &roi, char* windowName) {
@@ -449,7 +472,15 @@ int main() {
 	    frame_rate = 0;
 	  else
 	    frame_rate = 30;
-      }
+	  }
+	  else if (key == ']') {
+		  capture.set(CV_CAP_PROP_POS_FRAMES, frameNum + 60);
+		  frameNum += 60;
+	  }
+	  else if (key == '[') {
+		  capture.set(CV_CAP_PROP_POS_FRAMES, frameNum - 60);
+		  frameNum -= 60;
+	  }
       else if (key == 27) {
 	  break;
       }
