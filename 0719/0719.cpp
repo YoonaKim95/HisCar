@@ -5,25 +5,21 @@
 #include <iostream>
 #include <algorithm>
 #include <stdio.h>
+#include <queue>
 
 using namespace std;
 using namespace cv;
 
-void findandDrawContour(Mat& roi, char* windowName);
+void findandDrawContour(Mat& roi, char* windowName, int type);
 Mat preprocess(Mat& frame);
-Point findLineAndVP(Mat& white, Mat& frame, Point& rec_point, float& prev_Rslope, float& prev_Lslope, Point intersectionPoint, int& leftLaneKept, int& rightLaneKept);
+Point findLineAndVP(Mat& white, Mat& frame, Point& rec_point, float& prev_Rslope, float& prev_Lslope, Point intersectionPoint, queue <float>& rightSlope, int& rightLaneKept);
 bool isStopLine(Mat& frame, Point vp, float lSlope, float rSlope);
 void getMinMax(Mat& roi, int& min, int& max);
 
 
 
 Mat preprocess(Mat& frame) {
-  Mat gray, smot, sub, hsv, white, yellow, both, canny, left, right;
-  Mat sub1, sub2, sub3, sub4, smot1, smot2, smot3, smot4, gray1, gray2, gray3, gray4, white1, white2, white3, white4, gray_original_sub;
-  Mat grayl3, grayl4, grayr3, grayr4; //gray areas.
-  Mat canny4, canny3, canny2;
   Mat contourCanny;
-
   vector<Vec4i> lines;
   Mat matForContour;
   Mat contour;
@@ -59,30 +55,53 @@ Mat preprocess(Mat& frame) {
   inRange(roi, min, max, afterInRange);
   Canny(afterInRange, afterCanny, 50, 100);
 
-  imshow("afterInRange", afterInRange);
-
   dilate(afterCanny, afterCanny, Mat(), Point(-1, -1), 3);
   erode(afterCanny, afterCanny, Mat(), Point(-1, -1), 3);
   dilate(afterCanny, afterCanny, Mat(), Point(-1, -1), 3);
   erode(afterCanny, afterCanny, Mat(), Point(-1, -1), 3);
 
-  findandDrawContour(afterCanny, contourWindow);
+  imshow("afterCanny", afterCanny);
+  //findandDrawContour(afterCanny, contourWindow, 0);
+  //imshow("afterInrangeContour", afterCanny);
 
-  //// use canny to make binary image
-  //contour = matForContour(rec3_4);
-  //Canny(contour, contourCanny, 200, 400);
 
-  //dilate(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
-  //erode(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
-  //dilate(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
-  //erode(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
+  /////////////////////////////////////////////////////////////////////////////////////////
+  contour = matForContour(rec3_4);
+  Canny(contour, contourCanny, 100, 200);
+  
+  dilate(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
+  erode(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
+  dilate(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
+  erode(contourCanny, contourCanny, Mat(), Point(-1, -1), 3);
+  
+  imshow("CannyforContour", contourCanny);
+  
+//  findandDrawContour(contourCanny, contourWindow, 1);  
+//  imshow("CannyafterContour", contourCanny);
 
-  //imshow("CannyforContour", contourCanny);
-  //findandDrawContour(contourCanny, contourWindow);
-  return afterCanny;
+  /////////////////////////////////////////////////////////////////////////////////////
+  Mat testOne = contourCanny - afterCanny;
+  imshow("testOne", testOne);
+
+  Mat testTwo = afterCanny - contourCanny;
+  imshow("testTwo", testTwo);
+
+  Mat together = afterCanny + contourCanny; 
+  Mat testThree = together - testOne - testTwo;
+  imshow("testThree", testThree);
+
+  dilate(testThree, testThree, Mat(), Point(-1, -1), 3);
+  erode(testThree, testThree, Mat(), Point(-1, -1), 3);
+  dilate(testThree, testThree, Mat(), Point(-1, -1), 3);
+  erode(testThree, testThree, Mat(), Point(-1, -1), 3);
+
+  findandDrawContour(testThree, contourWindow, 0);
+
+  imshow("testThreeafterContour", testThree);
+  return testThree;
 }
 
-void findandDrawContour(Mat &roi, char* windowName) {
+void findandDrawContour(Mat &roi, char* windowName, int type) {
   vector<vector<Point> > contours;
 
   int k = 0;
@@ -94,61 +113,66 @@ void findandDrawContour(Mat &roi, char* windowName) {
   cvtColor(roi, roi, COLOR_GRAY2BGR);
 
   if (contours.size() > 1) {
-      Scalar color(255, 255, 10);
-      vector<Rect> rect(contours.size());
-      vector<Mat> matArr(contours.size());
-      drawContours(roi, contours, -1, Scalar(255, 255, 255), -1);
+	  Scalar color(255, 255, 10);
+	  vector<Rect> rect(contours.size());
+	  vector<Mat> matArr(contours.size());
+	  drawContours(roi, contours, -1, Scalar(255, 255, 255), -1);
 
-      for (int i = 0; i < contours.size(); i++) {
-	  Rect temp = boundingRect(Mat(contours[i]));
-	  rect[k] = temp;
-	  k++;
-      }
-      char name[10];
-      for (int i = 0; i < k; i++)      {
-	  sprintf(name, "Mat%d", i);
-	  matArr[i] = Mat(roi, rect[i]);
-	  Mat Cur_Mat = matArr[i];
-	  Mat calcMat;
-	  cvtColor(matArr[i], calcMat, CV_BGR2GRAY);
-	  int row = matArr[i].rows;
-	  vector<int> whiteCount(row);
-	  for (int y = 0; y < row; y++) {
-	      int count_white = 0;
-	      Mat rowMat = calcMat.row(y);
-	      count_white = countNonZero(rowMat);
-	      whiteCount[y] = count_white;
+	  for (int i = 0; i < contours.size(); i++) {
+		  Rect temp = boundingRect(Mat(contours[i]));
+		  rect[k] = temp;
+		  k++;
 	  }
+	  char name[10];
+	  for (int i = 0; i < k; i++)      {
+		  sprintf(name, "Mat%d", i);
+		  matArr[i] = Mat(roi, rect[i]);
+		  Mat Cur_Mat = matArr[i];
+		  Mat calcMat;
+		  cvtColor(matArr[i], calcMat, CV_BGR2GRAY);
+		  int row = matArr[i].rows;
+		  vector<int> whiteCount(row);
+		  for (int y = 0; y < row; y++) {
+			  int count_white = 0;
+			  Mat rowMat = calcMat.row(y);
+			  count_white = countNonZero(rowMat);
+			  whiteCount[y] = count_white;
+		  }
 
-	  int maxCount = -1, minCount = 1000;
-	  float sum = 0.0, mean = 0.0, standardDeviation = 0.0;
-	  for (int z = 0; z < row; z++) {
-	      sum += whiteCount[z];
-	      if (whiteCount[z] > maxCount)
-		maxCount = whiteCount[z];
-	      if (whiteCount[z] < minCount)
-		minCount = whiteCount[z];
+		  int maxCount = -1, minCount = 1000;
+		  float sum = 0.0, mean = 0.0, standardDeviation = 0.0;
+		  for (int z = 0; z < row; z++) {
+			  sum += whiteCount[z];
+			  if (whiteCount[z] > maxCount)
+				  maxCount = whiteCount[z];
+			  if (whiteCount[z] < minCount)
+				  minCount = whiteCount[z];
+		  }
+
+		  mean = sum / row;
+
+		  for (int zz = 0; zz < row; zz++)
+			  standardDeviation += pow(whiteCount[zz] - mean, 2);
+
+		  int stdevOfWhite = sqrt(standardDeviation / row);
+
+		  /*************** condition to delete non_lane contours ***************/
+		  if (type == 0) {
+			  if (stdevOfWhite >= 10 || mean >= 35 || (mean - stdevOfWhite) >= 20)
+				  matArr[i].setTo(0);
+		  }
+		  else if (type == 1) {
+			  if (stdevOfWhite >= 20 || mean >= 35 || (mean - stdevOfWhite) >= 15)
+				  matArr[i].setTo(0);
+		  }
 	  }
-
-	  mean = sum / row;
-
-	  for (int zz = 0; zz < row; zz++)
-	    standardDeviation += pow(whiteCount[zz] - mean, 2);
-
-	  int stdevOfWhite = sqrt(standardDeviation / row);
-
-	  /*************** condition to delete non_lane contours ***************/
-	  if (stdevOfWhite >= 15 || mean >= 40 || (mean - stdevOfWhite) >= 20)
-	    matArr[i].setTo(0);
-      }
   }
 }
 
-Point findLineAndVP(Mat& white, Mat& frame, float& prev_Rslope, float& prev_Lslope, Point intersectionPoint, int& leftLaneKept, int& rightLaneKept) {
-  Point rec_point(0, 168 + ((frame.rows - 168) / 16) * 3);
-
-  //declaration of x,y variables used in lines.
-  float x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+Point findLineAndVP(Mat& white, Mat& frame, float& prev_Rslope, float& prev_Lslope, Point intersectionPoint, queue <float>& rightSlope , int& rightLaneKept) {
+	Point rec_point(0, 168 + ((frame.rows - 168) / 16) * 3);
+	//declaration of x,y variables used in lines.
+	float x1 = 0, x2 = 0, y1 = 0, y2 = 0;
   float x3 = 0, x4 = 0, y3 = 0, y4 = 0;
   //initiate for the first time when there are no input values.
   float countright = 0, countleft = 0;
@@ -179,24 +203,64 @@ Point findLineAndVP(Mat& white, Mat& frame, float& prev_Rslope, float& prev_Lslo
       float slope = (((float)l[3] - (float)l[1]) / ((float)l[2] - (float)l[0]));
 
       //lines of right side
-      if (slope >= 0.3 && slope <= 3) {
-	  countright++;
-	  x1 += l[0];
-	  y1 += l[1] + rec_point.y;
-	  x2 += l[2];
-	  y2 += l[3] + rec_point.y;
-	  selected_slopeR = slope;
-	  line(frame, Point(l[0], l[1] + rec_point.y), Point(l[2], l[3] + rec_point.y), Scalar(0, 255, 0), 1);
+	  if (slope >= 0.3 && slope <= 3 && l[0] > (frame.cols / 2)) {
+		  if (prev_Rslope != 0) {
+			  float prev_rightb = intersectionPoint.y - prev_Rslope * intersectionPoint.x;
+			  float test_rightb = (l[1] + rec_point.y) - slope * l[0];
+			  float rightBdiff = abs(prev_rightb - test_rightb);
+
+			  cout << "prev right: " << prev_rightb << "test_rightb: " << test_rightb << "diff: " << rightBdiff << endl;
+
+			  if (rightBdiff < 8) {
+				  countright++;
+				  x1 += l[0];
+				  y1 += l[1] + rec_point.y;
+				  x2 += l[2];
+				  y2 += l[3] + rec_point.y;
+				  selected_slopeR = slope;
+				  line(frame, Point(l[0], l[1] + rec_point.y), Point(l[2], l[3] + rec_point.y), Scalar(0, 255, 0), 1);
+			  }
+		  }
+		  else {
+			 
+					  countright++;
+					  x1 += l[0];
+					  y1 += l[1] + rec_point.y;
+					  x2 += l[2];
+					  y2 += l[3] + rec_point.y;
+					  selected_slopeR = slope;
+					  line(frame, Point(l[0], l[1] + rec_point.y), Point(l[2], l[3] + rec_point.y), Scalar(0, 255, 0), 1);
+
+		  }
       }
       //lines of left side
-      if (slope <= -0.3  && slope >= -3) {
-	  countleft++;
-	  x3 += l[0];
-	  y3 += l[1] + rec_point.y;
-	  x4 += l[2];
-	  y4 += l[3] + rec_point.y;
-	  selected_slopeL = slope;
-	  line(frame, Point(l[0], l[1] + rec_point.y), Point(l[2], l[3] + rec_point.y), Scalar(0, 255, 0), 1);
+	  if (slope <= -0.3  && slope >= -3 && l[0] < (frame.cols / 2)) {
+		  if (prev_Rslope != 0) {
+			  float prev_leftb = intersectionPoint.y - prev_Lslope * intersectionPoint.x;
+			  float test_leftb = (l[1] + rec_point.y) - slope * l[0];
+			  float leftBdiff = abs(prev_leftb - test_leftb);
+
+			  cout << "prev LEFT: " << prev_leftb << "test_leftb: " << test_leftb << "diff: " << leftBdiff << endl;
+
+			  if (leftBdiff < 8) {
+				  countleft++;
+				  x3 += l[0];
+				  y3 += l[1] + rec_point.y;
+				  x4 += l[2];
+				  y4 += l[3] + rec_point.y;
+				  selected_slopeL = slope;
+				  line(frame, Point(l[0], l[1] + rec_point.y), Point(l[2], l[3] + rec_point.y), Scalar(0, 255, 0), 1);
+			  }
+		  }
+		  else {
+			  countleft++;
+			  x3 += l[0];
+			  y3 += l[1] + rec_point.y;
+			  x4 += l[2];
+			  y4 += l[3] + rec_point.y;
+			  selected_slopeL = slope;
+			  line(frame, Point(l[0], l[1] + rec_point.y), Point(l[2], l[3] + rec_point.y), Scalar(0, 255, 0), 1);
+		  }
       }
   }
 
@@ -207,51 +271,54 @@ Point findLineAndVP(Mat& white, Mat& frame, float& prev_Rslope, float& prev_Lslo
   /*RIGHT LANE*/
   float slopeToTestR = 0;
   float RIGHTSlopeDiffR = 0, RIGHTBDiff = 0;
-  float prevBR = intersectionPoint.y - prev_Lslope * intersectionPoint.x, BToTestR = 0;
-
-  // always get a new slope for the first frame
-  if (prev_Rslope == 0) {
-      Rslope = (y2 - y1) / (x2 - x1);
-      prev_Rslope = Rslope;
-      rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
-  }
-  else if (countleft == 0) {
-      Rslope = prev_Rslope;
-      rb = intersectionPoint.y - Rslope * intersectionPoint.x;
-  }
-  else  {
-      slopeToTestR = (y2 - y1) / (x2 - x1);
-      RIGHTSlopeDiffR = abs(slopeToTestR - prev_Lslope);
-      BToTestR = (y1 / countright + y) - slopeToTestR * (x1 / countright + x);
-      RIGHTBDiff = abs(BToTestR - prevBR);
-      cout << "Sloediff: " << RIGHTSlopeDiffR << " Currnet B: " << BToTestR << " prevB: " << prevBR << " rightDiff: " << RIGHTBDiff << endl;
-      //      if (leftLaneKept < 5 && ((leftSlopeDiff < 0.04 && leftBDiff < 20) || (leftSlopeDiff > 0.3 &&  leftBDiff > 30) || leftBDiff > 30)){
-
-      if (rightLaneKept < 10 && ((RIGHTSlopeDiffR > 0.3 || RIGHTBDiff > 20) || (RIGHTSlopeDiffR < 0.04 && RIGHTBDiff < 20))) {
-	  cout << "LeftLane Kept for " << rightLaneKept << " times" << endl;
-	  Rslope = prev_Rslope;
-	  rb = intersectionPoint.y - Rslope * intersectionPoint.x;
-	  cout << "Slope : " << Rslope << " Currnet B: " << rb << endl;
-	  rightLaneKept++;
-      }
-      else {
-	  Lslope = (y4 - y3) / (x4 - x3);
-	  prev_Lslope = Lslope;
-	  lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
-	  rightLaneKept = 0;
-      }
-  }
-
+  float prevBR = intersectionPoint.y - prev_Rslope * intersectionPoint.x, BToTestR = 0;
+ 
 
   if (countright == 0 && prev_Rslope != 0) {
-      Rslope = prev_Rslope;
-      rb = intersectionPoint.y - Rslope * intersectionPoint.x;
+	  Rslope = prev_Rslope;
+	  rb = intersectionPoint.y - Rslope * intersectionPoint.x;
+	  
+	  cout << "R kept" << endl;
   }
   else  {
-      Rslope = (y2 - y1) / (x2 - x1);
-      prev_Rslope = Rslope;
-      rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
+	  Rslope = (y2 - y1) / (x2 - x1);
+	  prev_Rslope = Rslope;
+	  rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
   }
+
+  //// always get a new slope for the first frame
+  //if (prev_Rslope == 0) {
+  //    Rslope = (y2 - y1) / (x2 - x1);
+  //    prev_Rslope = Rslope;
+  //    rb = (y1 / countright + y) - Rslope * (x1 / countright + x);
+  //}
+  //else if (countleft == 0) {
+  //    Rslope = prev_Rslope;
+  //    rb = intersectionPoint.y - Rslope * intersectionPoint.x;
+  //}
+  //else  {
+  //    slopeToTestR = (y2 - y1) / (x2 - x1);
+  //    RIGHTSlopeDiffR = abs(slopeToTestR - prev_Lslope);
+  //    BToTestR = (y1 / countright + y) - slopeToTestR * (x1 / countright + x);
+  //    RIGHTBDiff = abs(BToTestR - prevBR);
+  //    cout << "Sloediff: " << RIGHTSlopeDiffR << " Currnet B: " << BToTestR << " prevB: " << prevBR << " rightDiff: " << RIGHTBDiff << endl;
+  //    //      if (leftLaneKept < 5 && ((leftSlopeDiff < 0.04 && leftBDiff < 20) || (leftSlopeDiff > 0.3 &&  leftBDiff > 30) || leftBDiff > 30)){
+
+  //    if (rightLaneKept < 10 && ((RIGHTSlopeDiffR > 0.3 || RIGHTBDiff > 20) || (RIGHTSlopeDiffR < 0.04 && RIGHTBDiff < 20))) {
+	 // cout << "LeftLane Kept for " << rightLaneKept << " times" << endl;
+	 // Rslope = prev_Rslope;
+	 // rb = intersectionPoint.y - Rslope * intersectionPoint.x;
+	 // cout << "Slope : " << Rslope << " Currnet B: " << rb << endl;
+	 // rightLaneKept++;
+  //    }
+  //    else {
+	 // Lslope = (y4 - y3) / (x4 - x3);
+	 // prev_Lslope = Lslope;
+	 // lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
+	 // rightLaneKept = 0;
+  //    }
+  //}
+
   cout << "Right slope: " << Rslope << endl;
 
   /*LEFT LANE*/
@@ -259,42 +326,44 @@ Point findLineAndVP(Mat& white, Mat& frame, float& prev_Rslope, float& prev_Lslo
   float leftSlopeDiff= 0, leftBDiff = 0;
   float prevB = intersectionPoint.y - prev_Lslope * intersectionPoint.x, BToTest = 0;
 
-  // always get a new slope for the first frame
-  if (prev_Lslope == 0) {
-      Lslope = (y4 - y3) / (x4 - x3);
-      prev_Lslope = Lslope;
-      lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
-  }
-  else if (countleft == 0) {
-      Lslope = prev_Lslope;
-      lb = intersectionPoint.y - Lslope * intersectionPoint.x;
-  }
-  else  {
-      slopeToTest = (y4 - y3) / (x4 - x3);
-      leftSlopeDiff = abs(slopeToTest - prev_Lslope);
-      BToTest = (y3 / countleft + y) - slopeToTest * (x3 / countleft + x);
-      leftBDiff = abs(BToTest - prevB);
-      cout << "Sloediff: " << leftSlopeDiff << " Currnet B: " << BToTest << " prevB: " << prevB << " leftBDiff: " << leftBDiff << endl;
-      //      if (leftLaneKept < 5 && ((leftSlopeDiff < 0.04 && leftBDiff < 20) || (leftSlopeDiff > 0.3 &&  leftBDiff > 30) || leftBDiff > 30)){
+  //// always get a new slope for the first frame
+  //if (prev_Lslope == 0) {
+  //    Lslope = (y4 - y3) / (x4 - x3);
+  //    prev_Lslope = Lslope;
+  //    lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
+  //}
+  //else if (countleft == 0) {
+  //    Lslope = prev_Lslope;
+  //    lb = intersectionPoint.y - Lslope * intersectionPoint.x;
+  //}
+  //else  {
+  //    slopeToTest = (y4 - y3) / (x4 - x3);
+  //    leftSlopeDiff = abs(slopeToTest - prev_Lslope);
+  //    BToTest = (y3 / countleft + y) - slopeToTest * (x3 / countleft + x);
+  //    leftBDiff = abs(BToTest - prevB);
+  //    cout << "Sloediff: " << leftSlopeDiff << " Currnet B: " << BToTest << " prevB: " << prevB << " leftBDiff: " << leftBDiff << endl;
+  //    //      if (leftLaneKept < 5 && ((leftSlopeDiff < 0.04 && leftBDiff < 20) || (leftSlopeDiff > 0.3 &&  leftBDiff > 30) || leftBDiff > 30)){
 
-      if (leftLaneKept < 10 && ((leftSlopeDiff > 0.3 || leftBDiff > 20) || (leftSlopeDiff < 0.04 && leftBDiff < 20))&& leftBDiff < 200) {
-	  cout << "LeftLane Kept for " << leftLaneKept << " times" << endl;
-	  Lslope = prev_Lslope;
-	  lb = intersectionPoint.y - Lslope * intersectionPoint.x;
-	  cout << "Slope : " << Lslope << " Currnet B: " << lb << endl;
-	  leftLaneKept++;
-      } else {
-	  Lslope = (y4 - y3) / (x4 - x3);
-	  prev_Lslope = Lslope;
-	  lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
-	  leftLaneKept = 0;
-      }
-  }
+  //    if (leftLaneKept < 10 && ((leftSlopeDiff > 0.3 || leftBDiff > 20) || (leftSlopeDiff < 0.04 && leftBDiff < 20))&& leftBDiff < 200) {
+	 // cout << "LeftLane Kept for " << leftLaneKept << " times" << endl;
+	 // Lslope = prev_Lslope;
+	 // lb = intersectionPoint.y - Lslope * intersectionPoint.x;
+	 // cout << "Slope : " << Lslope << " Currnet B: " << lb << endl;
+	 // leftLaneKept++;
+  //    } else {
+	 // Lslope = (y4 - y3) / (x4 - x3);
+	 // prev_Lslope = Lslope;
+	 // lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
+	 // leftLaneKept = 0;
+  //    }
+  //}
 
-  /*
+  
    if (countleft == 0 && prev_Lslope != 0) {
       Lslope = prev_Lslope;
       lb = intersectionPoint.y - Lslope * intersectionPoint.x;
+	  cout << "L kept" << endl;
+
    }
    else {
       Lslope = (y4 - y3) / (x4 - x3);
@@ -302,8 +371,6 @@ Point findLineAndVP(Mat& white, Mat& frame, float& prev_Rslope, float& prev_Lslo
       prev_Lslope = Lslope;
       lb = (y3 / countleft + y) - Lslope * (x3 / countleft + x);
    }
-
-   */
 
   cout << "Left slope: " << Lslope << endl <<endl;
   float lastx1 = (0 - rb) / Rslope;
@@ -451,6 +518,11 @@ int main() {
   float prev_Rslope = 0, prev_Lslope = 0;
   Point prev_intersectionPoint(0, 0);
   int leftLaneKept = 0, rightLaneKept = 0;
+
+  queue <float> rightSlope;
+  queue <float> rightB;
+
+
   // videoRead
   while (1) {
       if (!capture.read(frame))
@@ -460,7 +532,7 @@ int main() {
       afterPreprocess = preprocess(frame);
       imshow("afterPreprocess", afterPreprocess);
 
-      prev_intersectionPoint = findLineAndVP(afterPreprocess, frame, prev_Rslope, prev_Lslope, prev_intersectionPoint, leftLaneKept, rightLaneKept);
+	  prev_intersectionPoint = findLineAndVP(afterPreprocess, frame, prev_Rslope, prev_Lslope, prev_intersectionPoint, rightSlope, rightLaneKept);
 
       imshow("frame", frame);
       isStopLine(originalFrame, prev_intersectionPoint, prev_Lslope, prev_Rslope);
@@ -474,12 +546,24 @@ int main() {
 	    frame_rate = 30;
 	  }
 	  else if (key == ']') {
-		  capture.set(CV_CAP_PROP_POS_FRAMES, frameNum + 60);
-		  frameNum += 60;
+		  capture.set(CV_CAP_PROP_POS_FRAMES, frameNum + 90);
+		  frameNum += 90;
+		  prev_Rslope = 0, prev_Lslope = 0;
 	  }
 	  else if (key == '[') {
-		  capture.set(CV_CAP_PROP_POS_FRAMES, frameNum - 60);
-		  frameNum -= 60;
+		  capture.set(CV_CAP_PROP_POS_FRAMES, frameNum - 90);
+		  frameNum -= 90;
+		  prev_Rslope = 0, prev_Lslope = 0;
+	  }
+	  else if (key == 'd') {
+		  capture.set(CV_CAP_PROP_POS_FRAMES, frameNum + 30);
+		  frameNum += 30;
+		  prev_Rslope = 0, prev_Lslope = 0;
+	  }
+	  else if (key == 'a') {
+		  capture.set(CV_CAP_PROP_POS_FRAMES, frameNum - 30);
+		  frameNum -= 30;
+		  prev_Rslope = 0, prev_Lslope = 0;
 	  }
       else if (key == 27) {
 	  break;
