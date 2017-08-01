@@ -24,10 +24,10 @@
 #define OT_FLOAT				0x0C
 
 // Error Code
-#define UNDEFINED_NAME			1		// Indexï¿½ï¿½ Nameï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
-#define PACKET_FORMAT_ERROR		2		// ï¿½ï¿½Å¶ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ß¸ï¿½ ï¿½Ç¾ï¿½ï¿½ï¿½
-#define OBJECT_ACCESS_ERROR		3		// ï¿½Ð±ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½Å³ï¿½, ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½Ð±â¸¦ ï¿½Ãµï¿½ï¿½ï¿½
-#define WRONG_VALUE_ASSIGNMENT	4		// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½î³ªï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ãµï¿½ï¿½ï¿½. ex) id=5000
+#define UNDEFINED_NAME			1		// Index³ª NameÀ¸·Î ÁöÁ¤ÇÑ ¿ÀºêÁ§Æ®°¡ Á¸ÀçÇÏÁö ¾ÊÀ½
+#define PACKET_FORMAT_ERROR		2		// ÆÐÅ¶ÀÇ ±¸¼ºÀÌ Àß¸ø µÇ¾úÀ½
+#define OBJECT_ACCESS_ERROR		3		// ÀÐ±â Àü¿ë ¿ÀºêÁ§Æ®¿¡ ¾²°Å³ª, ¾²±â Àü¿ë ¿ÀºêÁ§Æ®ÀÇ ÀÐ±â¸¦ ½ÃµµÇÔ
+#define WRONG_VALUE_ASSIGNMENT	4		// ¾²±â ¿ÀºêÁ§Æ®¿¡ ¹üÀ§¸¦ ¹þ¾î³ª´Â °ªÀ» ¾²±â ½ÃµµÇÔ. ex) id=5000
 
 #define GET_LOWBYTE_16(X)		(X & 0xFF)
 #define GET_HIGHBYTE_16(X)		((X >> 8) & 0xFF)
@@ -42,9 +42,9 @@
 
 // PROTOCOL
 // |1		|2		|3		|4		|5		|6		|7		|8		|
-// |CMD 	|INDEX			|SUB-IDX|VALUE							|	ï¿½ï¿½ï¿½ï¿½
-// |CMD		|ERR CODE		|NULL (0x00)							|	ï¿½ï¿½ï¿½ï¿½
-// |(0xF0)	|INDEX	|Value1 (INT16)	|Value2 (INT16)	|Value3	(INT16)	|	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+// |CMD 	|INDEX			|SUB-IDX|VALUE							|	Àü¼Û
+// |CMD		|ERR CODE		|NULL (0x00)							|	¿¡·¯
+// |(0xF0)	|INDEX	|Value1 (INT16)	|Value2 (INT16)	|Value3	(INT16)	|	µ¿±âÀü¼Û
 
 enum MW_AHRS_INDEX {
 	// INT32
